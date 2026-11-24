@@ -26,6 +26,8 @@ const SpacePage = lazy(() => import('./pages/Space'))
 const AIPage = lazy(() => import('./pages/AI'))
 const LibraryPage = lazy(() => import('./pages/Library'))
 const IMPage = lazy(() => import('./pages/IM'))
+const TaskPage = lazy(() => import('./pages/Task'))
+const CalendarPage = lazy(() => import('./pages/Calendar'))
 const LoginPage = lazy(() => import('./pages/Login'))
 const AI_LONG_PRESS_MS = 420
 type AIEntryMode = 'default' | 'voice'
@@ -99,74 +101,21 @@ function AIIcon({ active }: { active: boolean }) {
   )
 }
 
-export const apps = [
-  { id: 1, name: '工作台', color: '#3CC2A3', type: 'grid' },
-  { id: 2, name: '飞书 aily', color: '#C9B6F8', type: 'avatar' },
-  { id: 3, name: '视频会议', color: '#4A7CFF', type: 'video' },
-  { id: 4, name: '知识库', color: '#4A7CFF', type: 'knowledge' },
-  { id: 5, name: '多维表格', color: '#7B49F1', type: 'diamond' },
-  { id: 6, name: '假勤', color: '#FF8A00', type: 'person' },
-  { id: 7, name: '通讯录', color: '#F5B400', type: 'contact' },
-  { id: 8, name: '妙记', color: '#4D7CFE', type: 'note' },
-  { id: 9, name: '发现', color: '#444', type: 'discover' },
-]
-
-export const renderAppGlyph = (type: string) => {
+function renderAppGlyph(type: string) {
   switch (type) {
-    case 'grid':
+    case 'task':
       return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <rect x="3" y="3" width="8" height="8" fill="#3CC2A3" />
-          <rect x="13" y="3" width="8" height="8" fill="#5ED3B9" />
-          <rect x="3" y="13" width="8" height="8" fill="#64D8C0" />
-          <rect x="13" y="13" width="8" height="8" fill="#2EB99A" />
+        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="5" y="4" width="14" height="16" rx="3" />
+          <path d="m8 10 1.5 1.5L12 9m2 1.5h2m-8 5h8" />
         </svg>
       )
-    case 'avatar':
-      return <div className="more-page-app-avatar" />
-    case 'video':
+    case 'calendar':
       return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <rect x="4" y="6" width="11" height="12" fill="#4A7CFF" />
-          <path d="M16 9.2 20 7v10l-4-2.2z" fill="#6A95FF" />
-        </svg>
-      )
-    case 'knowledge':
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <path d="M5 5h14v14H5z" fill="#4A7CFF" opacity="0.2" />
-          <path d="M7 7h4v10H7z" fill="#4A7CFF" />
-          <path d="M13 7h4v3h-4z" fill="#6A95FF" />
-          <path d="M13 11.5h4V17h-4z" fill="#4A7CFF" />
-        </svg>
-      )
-    case 'diamond':
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <path d="M12 3 21 12 12 21 3 12z" fill="#7B49F1" />
-          <path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#fff" opacity="0.9" />
-        </svg>
-      )
-    case 'person':
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="9" r="4" fill="#fff" opacity="0.95" />
-          <path d="M5 20a7 7 0 0 1 14 0" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      )
-    case 'contact':
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <circle cx="11" cy="8.5" r="4" fill="#F5B400" />
-          <path d="M4 20a7 7 0 0 1 14 0" fill="#F5B400" />
-          <path d="M18 9h3M19.5 7.5v3" stroke="#F5B400" strokeWidth="1.8" strokeLinecap="round" />
-        </svg>
-      )
-    case 'note':
-      return (
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-          <path d="M5 16c3-1 4.5-2.7 5.5-6 1 3 2.5 4.6 5.5 5.5" stroke="#4D7CFE" strokeWidth="3" strokeLinecap="round" />
-          <path d="M14 8c.8 2.1 2 3.3 4 4" stroke="#7A9DFF" strokeWidth="3" strokeLinecap="round" />
+        <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#078467" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="4" y="6" width="16" height="14" rx="3" />
+          <path d="M8 4v4m8-4v4M4 11h16" />
+          <rect x="8" y="14" width="3" height="3" rx=".6" fill="#078467" stroke="none" />
         </svg>
       )
     case 'discover':
@@ -200,15 +149,15 @@ const defaultMainTabs: TabItem[] = [
   { key: 'more', label: '更多', icon: MoreIcon, source: 'system' },
 ]
 
-const editableAppTabs: TabItem[] = apps.map((app) => ({
-  key: `app-${app.id}`,
-  label: app.name,
-  appType: app.type,
-  color: app.color,
-  source: 'app',
-}))
+const moreApps = [
+  { key: 'task', label: '任务', appType: 'task', color: '#2563EB', source: 'app' },
+  { key: 'calendar', label: '日历', appType: 'calendar', color: '#078467', source: 'app' },
+  { key: 'app-9', label: '发现', appType: 'discover', color: '#444', source: 'app' },
+] as const
 
-const allEditableTabs: TabItem[] = [...defaultMainTabs, ...editableAppTabs]
+type MoreEntry = typeof moreApps[number]
+
+const allEditableTabs: TabItem[] = [...defaultMainTabs, ...moreApps]
 
 function AuthenticatedApp() {
   const { userInfo, logout } = useAuth()
@@ -305,7 +254,7 @@ function AuthenticatedApp() {
   }
 
   useEffect(() => {
-    if (activeKey === 'ai' || activeKey === 'more') return
+    if (activeKey === 'ai' || activeKey === 'more' || activeKey === 'task' || activeKey === 'calendar') return
     if (!mainTabs.some((tab) => tab.key === activeKey) && mainTabs.length > 0) {
       navigate(getPathByTabKey(mainTabs[0].key), { replace: true })
     }
@@ -355,6 +304,8 @@ function AuthenticatedApp() {
           <Route path={`${APP_ROUTE_PATHS.space}/:spaceId`} element={<SpacePage />} />
           <Route path={APP_ROUTE_PATHS.im} element={<IMPage />} />
           <Route path={APP_ROUTE_PATHS.library} element={<LibraryPage />} />
+          <Route path={APP_ROUTE_PATHS.task} element={<TaskPage />} />
+          <Route path={APP_ROUTE_PATHS.calendar} element={<CalendarPage />} />
           <Route
             path={APP_ROUTE_PATHS.ai}
             element={<AIPage onClose={() => navigate(APP_ROUTE_PATHS.home, { replace: true })} />}
@@ -425,10 +376,18 @@ function AuthenticatedApp() {
 
       {/* 更多抽屉 */}
       {showMoreDrawer && (
-        <MoreDrawer onClose={() => setShowMoreDrawer(false)} onEdit={() => {
-          setShowMoreDrawer(false)
-          setShowMoreEdit(true)
-        }} />
+        <MoreDrawer
+          entries={moreApps}
+          onClose={() => setShowMoreDrawer(false)}
+          onEdit={() => {
+            setShowMoreDrawer(false)
+            setShowMoreEdit(true)
+          }}
+          onOpenApp={(key) => {
+            setShowMoreDrawer(false)
+            handleTabChange(key)
+          }}
+        />
       )}
 
       {/* 更多编辑页面 */}
@@ -532,153 +491,36 @@ function ProfileMenu({ onClose, onLogout }: {
   )
 }
 
-function MoreDrawer({ onClose, onEdit }: { onClose: () => void, onEdit: () => void }) {
-  const recentItems = [
-    { id: 1, title: '飞书 aily', icon: 'avatar' },
-    { id: 2, title: '花三年时间整理出的向量数据库最佳实践', icon: 'chat' },
-    { id: 3, title: '审批', icon: 'approve' },
-    { id: 4, title: '飞书妙搭｜轻量系统，AI搭建，现已支持 Open...', icon: 'build' },
-  ]
-
-  const apps = [
-    { id: 1, name: '工作台', color: '#3CC2A3', type: 'grid' },
-    { id: 2, name: '飞书 aily', color: '#C9B6F8', type: 'avatar' },
-    { id: 3, name: '视频会议', color: '#4A7CFF', type: 'video' },
-    { id: 4, name: '知识库', color: '#4A7CFF', type: 'knowledge' },
-    { id: 5, name: '多维表格', color: '#7B49F1', type: 'diamond' },
-    { id: 6, name: '假勤', color: '#FF8A00', type: 'person' },
-    { id: 7, name: '通讯录', color: '#F5B400', type: 'contact' },
-    { id: 8, name: '妙记', color: '#4D7CFE', type: 'note' },
-    { id: 9, name: '发现', color: '#444', type: 'discover' },
-  ]
-
-  const renderAppGlyph = (type: string) => {
-    switch (type) {
-      case 'grid':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <rect x="3" y="3" width="8" height="8" fill="#3CC2A3" />
-            <rect x="13" y="3" width="8" height="8" fill="#5ED3B9" />
-            <rect x="3" y="13" width="8" height="8" fill="#64D8C0" />
-            <rect x="13" y="13" width="8" height="8" fill="#2EB99A" />
-          </svg>
-        )
-      case 'avatar':
-        return <div className="more-page-app-avatar" />
-      case 'video':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <rect x="4" y="6" width="11" height="12" fill="#4A7CFF" />
-            <path d="M16 9.2 20 7v10l-4-2.2z" fill="#6A95FF" />
-          </svg>
-        )
-      case 'knowledge':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M5 5h14v14H5z" fill="#4A7CFF" opacity="0.2" />
-            <path d="M7 7h4v10H7z" fill="#4A7CFF" />
-            <path d="M13 7h4v3h-4z" fill="#6A95FF" />
-            <path d="M13 11.5h4V17h-4z" fill="#4A7CFF" />
-          </svg>
-        )
-      case 'diamond':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3 21 12 12 21 3 12z" fill="#7B49F1" />
-            <path d="M12 7.2 16.8 12 12 16.8 7.2 12z" fill="#fff" opacity="0.9" />
-          </svg>
-        )
-      case 'person':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="9" r="4" fill="#fff" opacity="0.95" />
-            <path d="M5 20a7 7 0 0 1 14 0" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-        )
-      case 'contact':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <circle cx="11" cy="8.5" r="4" fill="#F5B400" />
-            <path d="M4 20a7 7 0 0 1 14 0" fill="#F5B400" />
-            <path d="M18 9h3M19.5 7.5v3" stroke="#F5B400" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        )
-      case 'note':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-            <path d="M5 16c3-1 4.5-2.7 5.5-6 1 3 2.5 4.6 5.5 5.5" stroke="#4D7CFE" strokeWidth="3" strokeLinecap="round" />
-            <path d="M14 8c.8 2.1 2 3.3 4 4" stroke="#7A9DFF" strokeWidth="3" strokeLinecap="round" />
-          </svg>
-        )
-      case 'discover':
-        return (
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#444" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7" />
-            <rect x="14" y="3" width="7" height="7" />
-            <rect x="3" y="14" width="7" height="7" />
-            <path d="M17.5 14v7M14 17.5h7" strokeLinecap="round" />
-          </svg>
-        )
-      default:
-        return null
-    }
-  }
-
+function MoreDrawer({ onClose, onEdit, onOpenApp, entries }: {
+  onClose: () => void
+  onEdit: () => void
+  onOpenApp: (key: string) => void
+  entries: readonly MoreEntry[]
+}) {
   return (
     <div className="more-drawer-overlay" onClick={onClose}>
-      <div className="more-drawer-panel" onClick={e => e.stopPropagation()}>
+      <div className="more-drawer-panel" role="dialog" aria-labelledby="more-drawer-title" onClick={e => e.stopPropagation()}>
         <div className="more-drawer-handle" />
         <div className="more-drawer-scroll">
           <div className="more-page-section-header">
-            <span>最近使用</span>
-            <button className="more-page-section-link" type="button">全部</button>
-          </div>
-
-          <div className="more-page-recent-list">
-            {recentItems.map((item) => (
-              <div className="more-page-recent-item" key={item.id}>
-                <div className={`more-page-recent-icon type-${item.icon}`}>
-                  {item.icon === 'chat' && (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 6.5h14a3 3 0 0 1 3 3v5a3 3 0 0 1-3 3H11l-4 3v-3H5a3 3 0 0 1-3-3v-5a3 3 0 0 1 3-3z" fill="#30C85A" />
-                      <circle cx="9" cy="12" r="1" fill="#fff" />
-                      <circle cx="12" cy="12" r="1" fill="#fff" />
-                      <circle cx="15" cy="12" r="1" fill="#fff" />
-                    </svg>
-                  )}
-                  {item.icon === 'approve' && (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M4 7h16l-2 10H6z" fill="#FF8A00" />
-                      <path d="m8 12 2.2 2.2L16 9" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                  {item.icon === 'build' && (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-                      <path d="M6 12h12" stroke="#4A7CFF" strokeWidth="2.2" strokeLinecap="round" />
-                      <path d="m12 6 6 6-6 6" stroke="#82A5FF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                      <path d="m12 6-6 6 6 6" stroke="#4A7CFF" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  )}
-                </div>
-                <div className="more-page-recent-text">{item.title}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="more-page-section-header second">
-            <span>更多</span>
+            <span id="more-drawer-title">更多</span>
             <button className="more-page-section-link" type="button" onClick={onEdit}>编辑</button>
           </div>
 
           <div className="more-page-app-grid">
-            {apps.map((app) => (
-              <div className="more-page-app-item" key={app.id}>
-                <div className="more-page-app-icon" style={{ background: app.type === 'discover' ? '#fff' : `${app.color}18` }}>
-                  {renderAppGlyph(app.type)}
-                </div>
-                <div className="more-page-app-name">{app.name}</div>
-              </div>
-            ))}
+            {entries.map((app) => {
+              const content = (
+                <>
+                  <span className="more-page-app-icon" style={{ background: app.appType === 'discover' ? '#fff' : `${app.color}18` }}>
+                    {renderAppGlyph(app.appType)}
+                  </span>
+                  <span className="more-page-app-name">{app.label}</span>
+                </>
+              )
+              return app.appType === 'discover'
+                ? <div className="more-page-app-item" key={app.key}>{content}</div>
+                : <button className="more-page-app-item" type="button" key={app.key} onClick={() => onOpenApp(app.key)}>{content}</button>
+            })}
           </div>
         </div>
       </div>

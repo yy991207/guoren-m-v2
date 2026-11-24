@@ -7,6 +7,8 @@ export const APP_ROUTE_PATHS = {
   space: '/space',
   library: '/library',
   im: '/im',
+  task: '/task',
+  calendar: '/calendar',
   ai: '/ai',
   partner: '/partner',
   login: '/login',
@@ -22,6 +24,10 @@ export function getPathByTabKey(tabKey: string): string {
       return APP_ROUTE_PATHS.library
     case 'im':
       return APP_ROUTE_PATHS.im
+    case 'task':
+      return APP_ROUTE_PATHS.task
+    case 'calendar':
+      return APP_ROUTE_PATHS.calendar
     case 'ai':
       return APP_ROUTE_PATHS.ai
     default:
@@ -44,6 +50,14 @@ export function getTabKeyByPathname(pathname: string): string {
 
   if (pathname.startsWith(APP_ROUTE_PATHS.im)) {
     return 'im'
+  }
+
+  if (pathname === APP_ROUTE_PATHS.task || pathname === `${APP_ROUTE_PATHS.task}/`) {
+    return 'task'
+  }
+
+  if (pathname === APP_ROUTE_PATHS.calendar || pathname === `${APP_ROUTE_PATHS.calendar}/`) {
+    return 'calendar'
   }
 
   if (pathname.startsWith(APP_ROUTE_PATHS.partner)) {

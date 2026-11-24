@@ -437,11 +437,7 @@
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 18px;
-}
-
-.more-page-sheet-scroll::-webkit-scrollbar {
-  display: none;
+  padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px));
 }
 
 .more-page-section-header {
@@ -454,10 +450,6 @@
   margin-bottom: 12px;
 }
 
-.more-page-section-header.second {
-  margin-top: 18px;
-}
-
 .more-page-section-link {
   border: none;
   background: transparent;
@@ -465,44 +457,6 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-}
-
-.more-page-recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.more-page-recent-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 44px;
-  padding: 0 12px;
-  background: #f7f8fa;
-}
-
-.more-page-recent-icon {
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.more-page-recent-icon.type-avatar {
-  background: linear-gradient(135deg, #8f8bff, #c99cff);
-}
-
-.more-page-recent-text {
-  min-width: 0;
-  flex: 1;
-  font-size: 15px;
-  color: #2b2d31;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .more-page-app-grid {
@@ -515,7 +469,21 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+  min-width: 0;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  font: inherit;
+}
+
+button.more-page-app-item {
+  cursor: pointer;
+}
+
+button.more-page-app-item:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
 }
 
 .more-page-app-icon {
@@ -524,13 +492,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 12px;
   background: #f4f5f7;
-}
-
-.more-page-app-avatar {
-  width: 30px;
-  height: 30px;
-  background: linear-gradient(135deg, #dcb8a4, #7b5547);
 }
 
 .more-page-app-name {
