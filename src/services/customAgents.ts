@@ -5,6 +5,7 @@ import {
   buildAiApiUrl,
   buildAuthorizedHeaders,
   handleUnauthorizedResponse,
+  resolveBrowserFetchUrl,
 } from '../utils/request'
 
 const CUSTOM_AGENTS_PATH = '/api/v1/custom-agents'
@@ -261,7 +262,8 @@ export async function uploadCustomAgentAvatar(file: File, signal?: AbortSignal):
   formData.append('tags', 'custom-agent-avatar')
   formData.append('description', '自定义智能体头像')
 
-  const response = await fetch(requestUrl, {
+  // 保留上游签名地址，只转换浏览器实际请求的地址。
+  const response = await fetch(resolveBrowserFetchUrl(requestUrl), {
     method: 'POST',
     headers,
     body: formData,

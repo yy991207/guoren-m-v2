@@ -8,11 +8,12 @@
  * 401 处理通过回调解耦，避免与 AuthContext 产生循环依赖
  */
 
+import { DEV_API_PROXY_ROUTES } from './devApiProxy';
 import { buildHmacAuthHeaders } from './hmacSign';
 
-// API 基础地址，从环境变量读取
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://test-guoren-api.grtcloud.net/jeecg-boot';
-const AI_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL || 'https://test-guoren-ai.grtcloud.net';
+// 基础地址由构建环境配置，避免缺配置时请求其他环境。
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const AI_BASE_URL = import.meta.env.VITE_AI_API_BASE_URL;
 
 // 401 回调注册
 type UnauthorizedCallback = () => void;
@@ -204,11 +205,24 @@ function getCanonicalAiApiBaseUrl(): string {
   return AI_BASE_URL.replace(/\/+$/, '');
 }
 
-export function getAiBrowserBaseUrl(): string {
-  return getCanonicalAiApiBaseUrl();
-}
+// 只转换浏览器发送的地址；签名仍使用测试服务的原始路径与查询参数。
+export function resolveBrowserFetchUrl(url: string): string {
+  if (import.meta.env.LOCAL_API_PROXY !== 'true' || typeof location === 'undefined') return url;
 
-function resolveBrowserFetchUrl(url: string): string {
+  let upstream: URL;
+  try {
+    upstream = new URL(url);
+  } catch {
+    return url;
+  }
+
+  for (const { prefix, path, envKey } of DEV_API_PROXY_ROUTES) {
+    if (upstream.pathname !== path && !upstream.pathname.startsWith(`${path}/`)) continue;
+    const base = import.meta.env[envKey];
+    if (base && upstream.origin === new URL(base).origin) {
+      return `${location.origin}${prefix}${upstream.pathname}${upstream.search}`;
+    }
+  }
   return url;
 }
 
@@ -274,7 +288,7 @@ export function buildAiBrowserUrl(
   path: string,
   params?: Record<string, string>
 ): string {
-  return buildUrlWithBase(getAiBrowserBaseUrl(), path, params);
+  return resolveBrowserFetchUrl(buildAiApiUrl(path, params));
 }
 
 /**

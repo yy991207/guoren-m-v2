@@ -8,10 +8,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TencentCloudChat from '@tencentcloud/lite-chat';
 import { useAuth } from '../../../contexts/AuthContext';
-import { handleUnauthorizedResponse } from '../../../utils/request';
+import { handleUnauthorizedResponse, resolveBrowserFetchUrl } from '../../../utils/request';
+import { resolveImScopedUserId } from '../utils/imScopedUserId';
 
-// SDKAppID（从 public/config.yaml 读取，开发环境直接硬编码）
-const SDKAPPID = 1600139526;
+// 三个环境共用同一个腾讯云即时聊天应用编号，需与后端签发凭证时使用的编号一致。
+const SDKAPPID = 1600144098;
 
 // 登录链路状态
 export type LoginStatus = 'idle' | 'loading' | 'success' | 'error';
@@ -29,7 +30,7 @@ async function getUserSig(userID: string, token: string): Promise<string> {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
   const url = `${baseUrl}/sys/group/im/userSig?userId=${encodeURIComponent(userID)}`;
 
-  const response = await fetch(url, {
+  const response = await fetch(resolveBrowserFetchUrl(url), {
     headers: {
       'X-Access-Token': token,
       'Accept': 'application/json, text/plain, */*',
@@ -61,6 +62,8 @@ async function getUserSig(userID: string, token: string): Promise<string> {
 
 export function useIMLogin() {
   const { token, userInfo, isAuthenticated } = useAuth();
+  const tenantId = String(userInfo?.loginTenantId ?? '').trim();
+  const imUserID = /^\d+$/.test(tenantId) ? resolveImScopedUserId(userInfo?.id ?? '', tenantId) : '';
   const [loginStatus, setLoginStatus] = useState<LoginStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const chatRef = useRef<ChatInstance | null>(null);
@@ -75,8 +78,14 @@ export function useIMLogin() {
       return;
     }
 
-    // 避免重复登录
-    if (chatRef.current?.getLoginUser?.()) {
+    if (!imUserID.startsWith(`${tenantId}_`)) {
+      setError('缺少有效的即时聊天租户或用户标识，请重新登录');
+      setLoginStatus('error');
+      return;
+    }
+
+    // 切换租户后，不能把旧账号的连接当成本次登录成功。
+    if (String(chatRef.current?.getLoginUser?.() ?? '') === imUserID) {
       setLoginStatus('success');
       return;
     }
@@ -85,10 +94,14 @@ export function useIMLogin() {
     setError(null);
 
     try {
-      const userSig = await getUserSig(userInfo.id, token);
+      const userSig = await getUserSig(imUserID, token);
 
-      // 创建 SDK 实例
+      // 创建 SDK 实例；切换租户时先退出旧账号，再用与签发一致的账号登录。
       const chat = TencentCloudChat.create({ SDKAppID: SDKAPPID });
+      const previousUserID = String(chat.getLoginUser?.() ?? '');
+      if (previousUserID && previousUserID !== imUserID) {
+        await chat.logout();
+      }
       chatRef.current = chat;
       globalChatInstance = chat;
 
@@ -108,15 +121,15 @@ export function useIMLogin() {
         setError('账号已在其他设备登录');
       });
 
-      // 执行登录
-      await chat.login({ userID: userInfo.id, userSig });
+      // 签发和登录必须使用同一个带租户前缀的账号。
+      await chat.login({ userID: imUserID, userSig });
       setLoginStatus('success');
     } catch (err) {
       console.error('[IM] 登录失败:', err);
       setError(err instanceof Error ? err.message : 'IM 登录失败');
       setLoginStatus('error');
     }
-  }, [isAuthenticated, userInfo?.id, token]);
+  }, [imUserID, isAuthenticated, tenantId, token, userInfo?.id]);
 
   /**
    * 登出 SDK
@@ -141,12 +154,11 @@ export function useIMLogin() {
    */
   useEffect(() => {
     if (isAuthenticated && userInfo?.id && token) {
-      doLogin();
+      void doLogin();
     } else {
-      doLogout();
+      void doLogout();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, userInfo?.id, token]);
+  }, [isAuthenticated, userInfo?.id, token, doLogin, doLogout]);
 
   /**
    * 组件卸载时清理

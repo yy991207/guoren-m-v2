@@ -187,7 +187,9 @@ export async function streamChatMessage(
   signal?: AbortSignal
 ): Promise<ReadableStream<Uint8Array>> {
   const { streamRequest } = await buildStartChatStreamRequest(sessionId, payload)
-  const response = await authorizedFetch(streamRequest.url, {
+  // 公共请求层用上游地址签名，再决定浏览器实际请求的地址。
+  const streamUrl = buildAiApiUrl(`${CHAT_SESSIONS_PATH}/${sessionId}/stream`)
+  const response = await authorizedFetch(streamUrl, {
     method: streamRequest.method,
     headers: {
       Accept: 'text/event-stream',

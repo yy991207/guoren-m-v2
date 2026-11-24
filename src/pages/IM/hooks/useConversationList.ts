@@ -8,6 +8,7 @@ import { fetchConversations } from '../api/messagingApi';
 import { getChatInstance } from './useIMLogin';
 import TencentCloudChat from '@tencentcloud/lite-chat';
 import { ensureDisplayNamesLoaded } from '../utils/displayNameStore';
+import { isValidMirrorConversation, toSdkConversationID } from '../utils/messagingConversationID';
 
 // 合并后的会话数据
 export interface MergedConversation {
@@ -76,17 +77,13 @@ export function useConversationList() {
   // 从镜像 API 获取会话列表
   const getMirrorConversations = useCallback(async (): Promise<MergedConversation[]> => {
     try {
-      const currentUserID = getCurrentUserID();
+      // 镜像单聊 ID 使用完整登录账号，不能拿业务用户编号来识别自己。
+      const currentUserID = getChatInstance()?.getLoginUser()?.toString();
       const response = await fetchConversations(undefined, 100);
       return response.items
-        .filter((item) => isSupportedConversationType(item.type))
+        .filter((item) => isSupportedConversationType(item.type) && isValidMirrorConversation(item, currentUserID))
         .map((item) => ({
-          conversation_id: normalizeConversationID(
-            item.conversation_id,
-            item.type,
-            item.participants,
-            currentUserID,
-          ),
+          conversation_id: toSdkConversationID(item.conversation_id, item.type, currentUserID),
           type: item.type,
           title: item.title || '',
           avatar: item.avatar || null,
@@ -301,54 +298,6 @@ export function useConversationList() {
 }
 
 /**
- * 将镜像 API 的 conversation_id 转换为 SDK 标准格式
- * 镜像 API 返回的格式和 SDK 内部格式不一致，需要在进入前端状态前统一转换。
- *
- * 转换规则：
- *   ai_c2c:  "userID:@RBT#botName"    → "C2C@RBT#botName"
- *   c2c:     "userID:targetUserID"      → "C2C#targetUserID"
- *   group:   "@TGS#groupID"           → "GROUP@TGS#groupID"
- */
-function normalizeConversationID(
-  rawConversationID: string,
-  type: string,
-  participants: string[] | null,
-  selfUserID: string | null,
-): string {
-  // 已经是 SDK 格式，直接返回
-  if (rawConversationID.startsWith('C2C') || rawConversationID.startsWith('GROUP')) {
-    return rawConversationID;
-  }
-
-  // 群聊: @TGS#groupID → GROUP@TGS#groupID
-  if (type === 'group' || rawConversationID.startsWith('@TGS#')) {
-    return `GROUP${rawConversationID}`;
-  }
-
-  // C2C / AI C2C：优先从 participants 拿对端；没有时再从 mirror 的 min:max 里减去自己
-  if (type === 'c2c' || type === 'ai_c2c') {
-    const peerFromParticipants = participants?.find((item) => item && item !== selfUserID) || '';
-    if (peerFromParticipants) {
-      return `C2C${peerFromParticipants}`;
-    }
-
-    if (selfUserID && rawConversationID.includes(':')) {
-      const peerFromConversationID = rawConversationID
-        .split(':')
-        .filter((item) => item && item !== selfUserID)
-        .join(':');
-      if (peerFromConversationID) {
-        return `C2C${peerFromConversationID}`;
-      }
-    }
-
-    return `C2C${rawConversationID}`;
-  }
-
-  return rawConversationID;
-}
-
-/**
  * 从会话 ID 中提取目标用户 ID（用于 displayName 查询）
  * C2C 私聊: C2C@RBT#userID -> @RBT#userID
  *           C2C#userID     -> userID
@@ -365,16 +314,6 @@ function isSupportedConversationType(
   type: string
 ): type is MergedConversation['type'] {
   return type === 'c2c' || type === 'ai_c2c' || type === 'group' || type === 'community';
-}
-
-function getCurrentUserID(): string | null {
-  try {
-    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-    const userID = String(userInfo?.id || '').trim();
-    return userID || null;
-  } catch {
-    return null;
-  }
 }
 
 function normalizeApiTime(value: string | null): string | null {

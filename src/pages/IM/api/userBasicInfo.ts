@@ -4,7 +4,7 @@
  * 接口地址: GET /sys/user/getBasicInfo?id={userID}
  */
 
-import { handleUnauthorizedResponse } from '../../../utils/request';
+import { handleUnauthorizedResponse, resolveBrowserFetchUrl } from '../../../utils/request';
 
 // API 基础地址
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -50,8 +50,14 @@ export async function fetchUserBasicInfo(userID: string): Promise<UserBasicInfo 
   }
 
   try {
-    const url = `${BASE_URL}/sys/user/getBasicInfo?id=${encodeURIComponent(userID)}`;
-    const response = await fetch(url, {
+    // 主后端查业务用户，不能把当前租户的即时聊天前缀传过去。
+    const tenantId = auth.tenantId.trim();
+    const tenantPrefix = `${tenantId}_`;
+    const businessUserId = tenantId && userID.startsWith(tenantPrefix) ? userID.slice(tenantPrefix.length) : userID;
+    if (!businessUserId) return null;
+
+    const url = `${BASE_URL}/sys/user/getBasicInfo?id=${encodeURIComponent(businessUserId)}`;
+    const response = await fetch(resolveBrowserFetchUrl(url), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

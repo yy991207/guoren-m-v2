@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { getAiBrowserBaseUrl } from '../utils/request'
+import { buildAiBrowserUrl } from '../utils/request'
 
 type VoiceState = 'idle' | 'requesting' | 'recording' | 'stopping' | 'error'
 
@@ -97,13 +97,11 @@ export function useVoiceInput(options: UseVoiceInputOptions): UseVoiceInputRetur
       throw new Error('当前缺少登录态，暂时无法使用语音输入')
     }
 
-    const apiBaseUrl = getAiBrowserBaseUrl()
-    const url = new URL(apiBaseUrl, window.location.origin)
+    // 先决定语音请求走本地代理还是直连，再按实际地址的协议建立 WebSocket 连接。
+    const url = new URL(buildAiBrowserUrl('/api/v1/asr/realtime'), window.location.origin)
     const protocol = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    const proxyBasePath = url.pathname.replace(/\/+$/, '')
 
-    // 开发环境和生产环境都直连 AI 域名，避免本地代理路径把语音链路和接口排查绕复杂。
-    return `${protocol}//${url.host}${proxyBasePath}/api/v1/asr/realtime?user_id=${encodeURIComponent(userId)}&x_access_token=${encodeURIComponent(token)}`
+    return `${protocol}//${url.host}${url.pathname}?user_id=${encodeURIComponent(userId)}&x_access_token=${encodeURIComponent(token)}`
   }, [])
 
   const sendAudioData = useCallback(() => {

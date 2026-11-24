@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../../contexts/AuthContext';
 import type { OrgUserItem } from '../../../services/aiOrgMembers';
 import { getChatInstance } from '../hooks/useIMLogin';
 import type { MergedConversation } from '../hooks/useConversationList';
+import { resolveImScopedUserId } from '../utils/imScopedUserId';
 import ContactPickerSheet from './ContactPickerSheet';
 
 interface SingleChatCreateSheetProps {
@@ -10,9 +12,9 @@ interface SingleChatCreateSheetProps {
   onConversationCreated?: (conversation: MergedConversation) => void;
 }
 
-function buildSingleConversation(user: OrgUserItem): MergedConversation {
+function buildSingleConversation(user: OrgUserItem, imUserID: string): MergedConversation {
   return {
-    conversation_id: `C2C${user.id}`,
+    conversation_id: `C2C${imUserID}`,
     type: 'c2c',
     title: user.realname,
     avatar: user.avatar || null,
@@ -32,6 +34,7 @@ const SingleChatCreateSheet: React.FC<SingleChatCreateSheetProps> = ({
   onClose,
   onConversationCreated,
 }) => {
+  const { userInfo } = useAuth();
   const [selectedUsers, setSelectedUsers] = useState<OrgUserItem[]>([]);
 
   useEffect(() => {
@@ -44,14 +47,19 @@ const SingleChatCreateSheet: React.FC<SingleChatCreateSheetProps> = ({
     const targetUser = users[0];
     if (!targetUser) return;
 
-    const nextConversation = buildSingleConversation(targetUser);
-
     try {
       const chat = getChatInstance();
       if (!chat) {
         throw new Error('IM 未连接');
       }
 
+      // 通讯录给的是业务用户编号，发起单聊要用参考端的带租户账号。
+      const tenantId = String(userInfo?.loginTenantId ?? '').trim();
+      const imUserID = resolveImScopedUserId(targetUser.id, tenantId);
+      if (!/^\d+$/.test(tenantId) || !imUserID) {
+        throw new Error('缺少有效的即时聊天租户或用户标识，请重新登录');
+      }
+      const nextConversation = buildSingleConversation(targetUser, imUserID);
       // 对齐 PC：发起单聊失败时在组件内收口异常，保留弹窗方便用户重试。
       await chat.getConversationProfile(nextConversation.conversation_id);
       onConversationCreated?.(nextConversation);
@@ -59,7 +67,6 @@ const SingleChatCreateSheet: React.FC<SingleChatCreateSheetProps> = ({
     } catch (error) {
       console.error('[IM][SingleChatCreate] start chat failed', {
         targetUserID: targetUser.id,
-        conversationID: nextConversation.conversation_id,
         error,
       });
     }

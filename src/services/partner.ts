@@ -3,6 +3,7 @@ import {
   buildAiApiUrl,
   buildAuthorizedHeaders,
   handleUnauthorizedResponse,
+  resolveBrowserFetchUrl,
 } from '../utils/request'
 import { getChatUserId } from './chat/api'
 
@@ -168,7 +169,8 @@ export async function uploadPartnerAvatar(file: File, signal?: AbortSignal): Pro
   formData.append('tags', 'partner-avatar')
   formData.append('description', '智能伙伴头像')
 
-  const response = await fetch(requestUrl, {
+  // 保留上游签名地址，只转换浏览器实际请求的地址。
+  const response = await fetch(resolveBrowserFetchUrl(requestUrl), {
     method: 'POST',
     headers,
     body: formData,

@@ -5,7 +5,8 @@
  * 鉴权方式: Query 参数 user_id + X-Access-Token 请求头
  */
 
-import { handleUnauthorizedResponse } from '../../../utils/request';
+import { handleUnauthorizedResponse, resolveBrowserFetchUrl } from '../../../utils/request';
+import { resolveImScopedUserId } from '../utils/imScopedUserId';
 
 // 镜像 API 基础地址（独立 Python 服务，不同于 jeecg-boot）
 const MESSAGING_BASE_URL = import.meta.env.VITE_IM_MESSAGING_BASE_URL || '';
@@ -101,25 +102,29 @@ async function messagingRequest<T = any>(
     throw new Error('用户未登录，无法获取鉴权信息');
   }
 
-  // 构建完整 URL
-  const fullUrl = `${MESSAGING_BASE_URL}${path}`;
-  const urlObj = new URL(fullUrl);
-  // user_id 必传
-  urlObj.searchParams.set('user_id', auth.userId);
+  // 消息接口和腾讯云登录使用同一个带租户前缀的账号。
+  const tenantId = auth.tenantId.trim();
+  const imUserID = resolveImScopedUserId(auth.userId, tenantId);
+  if (!/^\d+$/.test(tenantId) || !imUserID.startsWith(`${tenantId}_`)) {
+    throw new Error('缺少有效的即时聊天租户或用户标识，请重新登录');
+  }
+
+  const urlObj = new URL(`${MESSAGING_BASE_URL}${path}`);
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       urlObj.searchParams.append(key, value);
     });
   }
+  urlObj.searchParams.set('user_id', imUserID);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
     'X-Access-Token': auth.token,
-    'X-Tenant-Id': auth.tenantId,
+    'X-Tenant-Id': tenantId,
   };
 
-  const response = await fetch(urlObj.toString(), {
+  const response = await fetch(resolveBrowserFetchUrl(urlObj.toString()), {
     ...options,
     headers,
   });
@@ -299,7 +304,7 @@ export async function requestOssSignUrl(
   }
 
   const url = `${APP_BASE_URL}/open/aliyun/oss/v1/temp/url`;
-  const resp = await fetch(url, {
+  const resp = await fetch(resolveBrowserFetchUrl(url), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
