@@ -1,0 +1,134 @@
+.ai-chat-user-stack[data-sent-gallery] {
+  width: 100%;
+}
+
+.ai-sent-attachments {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-sent-attachment {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #e3e7eb;
+  border-radius: 10px;
+  background: #fff;
+  color: #25282d;
+}
+
+.ai-sent-attachment[data-image='true'] {
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.ai-sent-attachment__preview {
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 184px);
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: zoom-in;
+}
+
+.ai-sent-attachment__photo {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(100%, 184px);
+  max-height: 248px;
+  border-radius: 8px;
+}
+
+/* 单图限宽后外层仍可能多占空间，让实际图片贴齐消息右边缘。 */
+.ai-sent-attachments[data-gallery='false'] {
+  justify-content: flex-end;
+}
+
+.ai-sent-attachments[data-gallery='false'] :is(.ai-sent-attachment__preview, .ai-sent-attachment__photo) {
+  margin-inline-start: auto;
+}
+
+.ai-sent-attachment__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 7px;
+  background: #eef0f3;
+  color: #555e69;
+}
+
+.ai-sent-attachment__name {
+  display: -webkit-box;
+  min-width: 0;
+  max-width: 170px;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 16px;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.ai-sent-attachments[data-gallery='true'] {
+  width: min(100%, 312px);
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ai-sent-attachments[data-gallery='true'][data-overflow='false'] {
+  justify-content: flex-end;
+}
+
+.ai-sent-attachments[data-gallery='true'] > .ai-sent-attachment {
+  flex: 0 0 calc((100% - 16px) / 3);
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  aspect-ratio: 1;
+  padding: 5px;
+  overflow: hidden;
+  text-align: center;
+}
+
+.ai-sent-attachments[data-gallery='true'] > .ai-sent-attachment[data-image='true'] { padding: 0; }
+
+.ai-sent-attachments[data-gallery='true'] :is(.ai-sent-attachment__preview, .ai-sent-attachment__photo) {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.ai-sent-attachments[data-gallery='true'] .ai-sent-attachment__photo {
+  max-height: none;
+  object-fit: cover;
+}
+
+.ai-sent-attachments[data-gallery='true'] .ai-sent-attachment__name {
+  font-size: 11px;
+  line-height: 14px;
+}
+
+.ai-sent-attachments:focus-visible,
+.ai-sent-attachment__preview:focus-visible {
+  outline: 2px solid #545b64;
+  outline-offset: -2px;
+}

@@ -7,6 +7,7 @@ import type {
 } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
 import { AiMarkdownContent } from './AiMarkdownContent'
+import { AiSentAttachments } from './AiSentAttachments'
 import {
   extractAssistantOutputText,
   resolveAssistantCopyTargets,
@@ -15,6 +16,7 @@ import {
 type AiConversationThreadProps = {
   messages: ChatMessage[]
   routeSessionId: string | null
+  showSentAttachmentCards?: boolean
   scrollRef: RefObject<HTMLDivElement | null>
   onSelectArtifact: (artifact: SelectedArtifact) => void
 }
@@ -772,26 +774,31 @@ function AssistantOutputMessage({
   )
 }
 
-function UserMessage({ message }: { message: ChatMessage }) {
+function UserMessage({ message, showSentAttachmentCards }: { message: ChatMessage; showSentAttachmentCards: boolean }) {
+  const hasAttachments = message.attachments.length > 0
+  const showAttachmentTray = hasAttachments && showSentAttachmentCards
+
   return (
     <div className="ai-chat-row is-user">
-      <div className="ai-chat-user-stack">
-        <div className="ai-chat-bubble is-user">
-          {message.attachments.length > 0 && (
-            <div className="ai-chat-attachment-list">
-              {message.attachments.map((attachment) => (
-                <div className="ai-chat-attachment-chip" key={attachment.id}>
-                  <span className="ai-chat-attachment-name">{attachment.name}</span>
-                  <span className="ai-chat-attachment-status">
-                    {attachment.kind === 'resource' ? '资料库' : '文件'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {message.content ? <div className="ai-chat-user-text">{message.content}</div> : null}
-        </div>
+      <div className="ai-chat-user-stack" data-sent-gallery={showAttachmentTray && message.attachments.length > 1 ? '' : undefined}>
+        {showAttachmentTray && <AiSentAttachments attachments={message.attachments} />}
+        {(!showAttachmentTray || message.content) && (
+          <div className="ai-chat-bubble is-user">
+            {!showSentAttachmentCards && hasAttachments && (
+              <div className="ai-chat-attachment-list">
+                {message.attachments.map((attachment) => (
+                  <div className="ai-chat-attachment-chip" key={attachment.id}>
+                    <span className="ai-chat-attachment-name">{attachment.name}</span>
+                    <span className="ai-chat-attachment-status">
+                      {attachment.kind === 'resource' ? '资料库' : '文件'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {message.content ? <div className="ai-chat-user-text">{message.content}</div> : null}
+          </div>
+        )}
         <div className="ai-chat-message-meta is-user is-outside">
           <span>{formatMessageTime(message.createdAt)}</span>
         </div>
@@ -815,6 +822,7 @@ function LoadingMessage() {
 export function AiConversationThread({
   messages,
   routeSessionId,
+  showSentAttachmentCards = false,
   scrollRef,
   onSelectArtifact,
 }: AiConversationThreadProps) {
@@ -845,7 +853,9 @@ export function AiConversationThread({
     <div className="ai-chat-thread" ref={scrollRef}>
       {groups.map((group) => {
         if (group.type === 'user') {
-          return group.messages.map((message) => <UserMessage key={message.id} message={message} />)
+          return group.messages.map((message) => (
+            <UserMessage key={message.id} message={message} showSentAttachmentCards={showSentAttachmentCards} />
+          ))
         }
 
         if (group.type === 'assistant:processing') {

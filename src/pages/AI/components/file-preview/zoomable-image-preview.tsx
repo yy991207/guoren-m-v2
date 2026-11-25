@@ -2,7 +2,17 @@ import { ImageViewer } from 'antd-mobile'
 import { useLayoutEffect, useRef, useState } from 'react'
 import styles from './file-preview.module.css'
 
-export function ZoomableImagePreview({ src, name }: { src: string; name: string }) {
+type ZoomableImagePreviewProps = {
+  src: string
+  name: string
+  thumbnail?: {
+    buttonClassName: string
+    imageClassName: string
+    onImageError?: () => void
+  }
+}
+
+export function ZoomableImagePreview({ src, name, thumbnail }: ZoomableImagePreviewProps) {
   const [expanded, setExpanded] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
 
@@ -19,12 +29,20 @@ export function ZoomableImagePreview({ src, name }: { src: string; name: string 
       <button
         aria-haspopup="dialog"
         aria-label={`查看大图：${name}`}
-        className={styles.previewImageWrap}
+        className={thumbnail?.buttonClassName ?? styles.previewImageWrap}
         type="button"
         onClick={() => setExpanded(true)}
       >
-        <img className={styles.previewImage} src={src} alt={name} decoding="async" />
-        <span className={styles.imageHint}>点开大图 · 双指缩放</span>
+        <img
+          alt={name}
+          className={thumbnail?.imageClassName ?? styles.previewImage}
+          decoding="async"
+          draggable={thumbnail ? false : undefined}
+          loading={thumbnail ? 'lazy' : undefined}
+          src={src}
+          onError={thumbnail?.onImageError}
+        />
+        {!thumbnail && <span className={styles.imageHint}>点开大图 · 双指缩放</span>}
       </button>
       {expanded && (
         <dialog

@@ -1936,6 +1936,7 @@ export default function AIPage({
             messages={messages}
             onSelectArtifact={setSelectedArtifact}
             routeSessionId={routeSessionId}
+            showSentAttachmentCards={!isPartnerRoute}
             scrollRef={scrollerRef}
           />
         ) : isPartnerRoute ? (
