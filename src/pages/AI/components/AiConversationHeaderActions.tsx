@@ -1,4 +1,4 @@
-import { DeleteOutline, MoreOutline } from 'antd-mobile-icons'
+import { AddCircleOutline, DeleteOutline, MoreOutline } from 'antd-mobile-icons'
 import { useEffect, useRef, useState } from 'react'
 
 type AiConversationHeaderActionsProps = {
@@ -11,6 +11,7 @@ type AiConversationHeaderActionsProps = {
   onOpenPartnerSettings?: () => void
   onOpenCustomAgentDetail?: () => void
   onSaveCommand?: () => void
+  onNewChat?: () => void
   onClose: () => void
 }
 
@@ -24,6 +25,7 @@ export function AiConversationHeaderActions({
   onOpenPartnerSettings,
   onOpenCustomAgentDetail,
   onSaveCommand,
+  onNewChat,
   onClose,
 }: AiConversationHeaderActionsProps) {
   const [showActionMenu, setShowActionMenu] = useState(false)
@@ -69,6 +71,23 @@ export function AiConversationHeaderActions({
 
   return (
     <div className="ai-page-header-right" ref={actionContainerRef}>
+      {onNewChat ? (
+        <button
+          aria-label="新建对话"
+          className="ai-page-header-action"
+          title="新建对话"
+          type="button"
+          onClick={() => {
+            // 切换对话前先收起当前对话的更多菜单。
+            setShowActionMenu(false)
+            onNewChat()
+          }}
+        >
+          {/* 与侧栏「新建任务」保持同一个圆圈加号图标。 */}
+          <AddCircleOutline aria-hidden="true" fontSize={20} />
+        </button>
+      ) : null}
+
       {showCustomAgentMoreAction ? (
         <div className="ai-page-header-action-menu-wrap">
           <button
@@ -178,7 +197,7 @@ export function AiConversationHeaderActions({
           type="button"
           onClick={onClose}
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>

@@ -447,7 +447,7 @@ export function useAiChatRuntime() {
     promptOverride?: string,
     nextToolType?: string | null,
     attachmentOverride?: ChatAttachment[],
-    submitOptions?: { enableWebSearch?: boolean; forceNewSession?: boolean },
+    submitOptions?: { enableWebSearch?: boolean; forceNewSession?: boolean; preserveInput?: boolean },
   ) => {
     const prompt = (promptOverride ?? inputValue).trim()
 
@@ -498,7 +498,10 @@ export function useAiChatRuntime() {
 
       setMessages(initialSnapshot.messages)
       setIsResponding(true)
-      setInputValue('')
+      // 录音单独发送识别结果，不能清掉切到语音前留下的文字草稿。
+      if (!submitOptions?.preserveInput) {
+        setInputValue('')
+      }
       setDraftAttachments([])
       setActiveToolType(resolvedToolType ?? null)
 

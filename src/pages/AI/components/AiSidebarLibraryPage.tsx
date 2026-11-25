@@ -1,4 +1,5 @@
 import { Toast } from 'antd-mobile'
+import { LeftOutline } from 'antd-mobile-icons'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   fetchKnowledgeSpaces,
@@ -14,7 +15,7 @@ import AiLibraryFilePreview from './AiLibraryFilePreview'
 import './AiSidebarLibraryPage.css'
 
 type AiSidebarLibraryPageProps = {
-  onOpenDrawer: () => void
+  onBack: () => void
   onOpenSession: (sessionId: string) => void
 }
 
@@ -33,16 +34,6 @@ const FILE_TYPE_FILTERS: Array<{ key: LibraryPageFileType; label: string }> = [
   { key: 'whiteboard', label: '白板' },
   { key: 'other', label: '其他' },
 ]
-
-function MenuIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <line x1="3" y1="6" x2="21" y2="6" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-      <line x1="3" y1="18" x2="21" y2="18" />
-    </svg>
-  )
-}
 
 function SearchIcon() {
   return (
@@ -139,7 +130,7 @@ function triggerBrowserDownload(downloadUrl: string, fileName: string) {
 }
 
 export function AiSidebarLibraryPage({
-  onOpenDrawer,
+  onBack,
   onOpenSession,
 }: AiSidebarLibraryPageProps) {
   const [keyword, setKeyword] = useState('')
@@ -388,8 +379,8 @@ export function AiSidebarLibraryPage({
   return (
     <div className="ai-library-hub-page">
       <div className="ai-library-hub-header">
-        <button className="ai-library-hub-header-btn" type="button" onClick={onOpenDrawer}>
-          <MenuIcon />
+        <button aria-label="返回发现入口" className="ai-library-hub-header-btn" type="button" onClick={onBack}>
+          <LeftOutline aria-hidden="true" width={20} height={20} />
         </button>
         <div className="ai-library-hub-title">库</div>
         <div className="ai-library-hub-header-spacer" />

@@ -1,0 +1,303 @@
+.ai-workspace-composer {
+  --ai-composer-ink: #202124;
+  --ai-composer-text-muted: #626568;
+  --ai-composer-surface: #fff;
+  --ai-composer-pressed: #f0f1f1;
+  --ai-composer-accent: #087e68;
+  --ai-composer-recording: #06bf9a;
+  --ai-composer-pending: #e0f5ef;
+  --ai-composer-cancel: #a3263c;
+  --ai-composer-cancel-tint: #ffe3e8;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  color: var(--ai-composer-ink);
+}
+
+.ai-workspace-composer-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto 44px;
+  grid-template-areas: 'mode field action plus';
+  align-items: end;
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 24px;
+  background: var(--ai-composer-surface);
+}
+
+.ai-workspace-composer-row[data-expanded='true'] {
+  grid-template-columns: 44px minmax(0, 1fr) 44px 36px;
+  grid-template-areas:
+    'field field field field'
+    'mode model plus action';
+  padding-inline-end: 8px;
+  border-radius: 22px;
+}
+
+.ai-workspace-composer-mode { grid-area: mode; }
+.ai-workspace-composer-plus { grid-area: plus; }
+
+.ai-workspace-composer-mode > svg {
+  stroke-width: 2.2;
+}
+
+/* 图标库的加号和箭头是填充路径，加描边后与语音图标的粗细保持一致。 */
+.ai-workspace-composer-plus svg path,
+.ai-workspace-composer-model svg path {
+  stroke: currentColor;
+  stroke-width: 1;
+}
+
+.ai-workspace-composer-row:is([data-stage='requesting'], [data-stage='finishing']) {
+  background: var(--ai-composer-pending);
+  color: var(--ai-composer-accent);
+}
+
+.ai-workspace-composer-row[data-stage='recording'] {
+  background: var(--ai-composer-recording);
+}
+
+.ai-workspace-composer-row[data-stage='canceling'] {
+  background: var(--ai-composer-cancel-tint);
+  color: var(--ai-composer-cancel);
+}
+
+/* 录音态只留横条，隐藏两侧入口但保留占位，避免正在按住的按钮移位。 */
+.ai-workspace-composer-row:is([data-stage='recording'], [data-stage='canceling']) > .ai-workspace-composer-icon {
+  visibility: hidden;
+}
+
+.ai-workspace-composer-icon,
+.ai-workspace-composer-hold {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ai-workspace-composer-icon {
+  width: 44px;
+  height: 48px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.ai-workspace-composer-icon:active:not(:disabled) {
+  background: var(--ai-composer-pressed);
+}
+
+.ai-workspace-composer-icon.ai-workspace-composer-action {
+  grid-area: action;
+  width: 40px;
+  min-height: 40px;
+  height: 40px;
+  margin-bottom: 4px;
+  background: var(--ai-composer-ink);
+  color: #fff;
+}
+
+.ai-workspace-composer-row[data-expanded='true'] .ai-workspace-composer-action {
+  width: 36px;
+  min-height: 36px;
+  height: 36px;
+  align-self: center;
+  margin: 0;
+}
+
+.ai-workspace-composer-icon.ai-workspace-composer-action:disabled {
+  background: #c5c7c9;
+  opacity: 1;
+}
+
+.ai-workspace-composer-icon.ai-workspace-composer-action:active:not(:disabled) {
+  background: #394453;
+}
+
+.ai-workspace-composer-icon:disabled,
+.ai-workspace-composer-hold[data-stage='idle'][aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.52;
+}
+
+.ai-workspace-composer-field,
+.ai-workspace-composer-hold {
+  grid-area: field;
+  min-width: 0;
+}
+
+.ai-workspace-composer-field {
+  align-self: center;
+  padding: 12px 2px;
+}
+
+.ai-workspace-composer-row[data-expanded='true'] .ai-workspace-composer-field {
+  padding: 14px 8px 5px 16px;
+}
+
+.ai-workspace-composer-model {
+  grid-area: model;
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  gap: 5px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 22px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-workspace-composer-model:active:not(:disabled) {
+  background: var(--ai-composer-pressed);
+}
+
+.ai-workspace-composer-model-icon {
+  display: grid;
+  flex: 0 0 16px;
+  height: 16px;
+  place-items: center;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.ai-workspace-composer-field .adm-text-area {
+  --font-size: 16px;
+  --color: var(--ai-composer-ink);
+  --placeholder-color: var(--ai-composer-text-muted);
+}
+
+.ai-workspace-composer-field .adm-text-area-element {
+  overflow-y: auto;
+}
+
+.ai-workspace-composer-icon:focus-visible,
+.ai-workspace-composer-model:focus-visible,
+.ai-workspace-composer-hold:focus-visible {
+  outline: 2px solid var(--ai-composer-accent);
+  outline-offset: 1px;
+}
+
+.ai-workspace-composer-hold {
+  min-height: 48px;
+  padding-inline: 8px;
+  background: transparent;
+  font-size: 15px;
+  font-weight: 650;
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.ai-workspace-composer-feedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 66px;
+  padding: 4px 12px 6px;
+  box-sizing: border-box;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.ai-workspace-composer-feedback[data-stage='idle'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
+}
+
+.ai-workspace-composer-feedback[data-stage='canceling'] {
+  color: var(--ai-composer-cancel);
+}
+
+.ai-workspace-composer-feedback-title {
+  font-weight: 650;
+}
+
+.ai-workspace-composer-feedback-hint {
+  color: var(--ai-composer-text-muted);
+  font-size: 12px;
+}
+
+.ai-workspace-composer-feedback[data-stage='recording'] .ai-workspace-composer-feedback-hint {
+  color: var(--ai-composer-ink);
+}
+
+.ai-workspace-composer-wave {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  width: min(100%, 200px);
+  height: 28px;
+  color: var(--ai-composer-recording);
+}
+
+.ai-workspace-composer-wave > span {
+  width: 3px;
+  height: 7px;
+  border-radius: 2px;
+  background: currentColor;
+  animation: ai-workspace-composer-pulse 800ms ease-in-out infinite alternate;
+}
+
+.ai-workspace-composer-wave > span:nth-child(3n + 2) {
+  height: 10px;
+  animation-delay: -220ms;
+}
+
+.ai-workspace-composer-wave > span:nth-child(5n + 3) {
+  height: 12px;
+  animation-delay: -410ms;
+}
+
+@keyframes ai-workspace-composer-pulse {
+  from { transform: scaleY(0.45); }
+  to { transform: scaleY(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-workspace-composer-wave > span {
+    animation: none;
+  }
+}
+
+.ai-workspace-composer-note {
+  margin: 0;
+  color: var(--ai-composer-text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.ai-workspace-composer-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

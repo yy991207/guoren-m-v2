@@ -1,17 +1,15 @@
+import { LeftOutline } from 'antd-mobile-icons'
+
 type AiDiscoverHeaderProps = {
-  onOpenDrawer: () => void
+  onBack: () => void
 }
 
-export function AiDiscoverHeader({ onOpenDrawer }: AiDiscoverHeaderProps) {
+export function AiDiscoverHeader({ onBack }: AiDiscoverHeaderProps) {
   return (
     <div className="ai-discover-header">
-      <div className="ai-discover-header-menu" onClick={onOpenDrawer}>
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-      </div>
+      <button aria-label="返回发现入口" className="ai-discover-header-menu" type="button" onClick={onBack}>
+        <LeftOutline aria-hidden="true" width={20} height={20} />
+      </button>
       <div className="ai-discover-header-title">发现</div>
       <div aria-hidden="true" className="ai-discover-header-spacer" />
     </div>

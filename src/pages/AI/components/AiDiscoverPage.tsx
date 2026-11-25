@@ -12,7 +12,7 @@ type AiDiscoverPageProps = {
   discoverSections: Array<{ key: AgentCategoryKey; title: string; items: DiscoverAgentItem[] }>
   onOpenAgentChat: (agent: DiscoverAgentItem) => void
   onOpenCreateAgent: () => void
-  onOpenDrawer: () => void
+  onBack: () => void
 }
 
 export const AI_DISCOVER_CATEGORY_PAGE_SIZE = 5
@@ -104,7 +104,7 @@ export function AiDiscoverPage({
   discoverSections,
   onOpenAgentChat,
   onOpenCreateAgent,
-  onOpenDrawer,
+  onBack,
 }: AiDiscoverPageProps) {
   const [searchValue, setSearchValue] = useState('')
   const [categoryPages, setCategoryPages] = useState<Record<AgentCategoryKey, number>>(() => createInitialCategoryPages())
@@ -155,7 +155,7 @@ export function AiDiscoverPage({
 
   return (
     <div className="ai-discover-page">
-      <AiDiscoverHeader onOpenDrawer={onOpenDrawer} />
+      <AiDiscoverHeader onBack={onBack} />
 
       <div className="ai-discover-content">
         <div className="ai-discover-actions">
