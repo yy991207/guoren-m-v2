@@ -1,74 +1,42 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { AiDiscoverHub, AiWorkspaceNavigation } from './AiWorkspaceNavigation'
+import { AiWorkspaceNavigation } from './AiWorkspaceNavigation'
 
-function renderDiscoverHub() {
-  const callbacks = {
-    onOpenDiscover: vi.fn(),
-    onOpenLibrary: vi.fn(),
-    onOpenSkills: vi.fn(),
-  }
-  render(<AiDiscoverHub {...callbacks} />)
-  return callbacks
-}
+const tabs = [
+  ['task', '任务'], ['agents', '智能体'], ['library', '库'], ['skills', '技能'],
+] as const
 
 describe('AI 工作区导航', () => {
-  it.each(['task', 'discover'] as const)('显示任务和发现，标出当前项（%s）并分别调用对应回调', (active) => {
-    const onTask = vi.fn()
-    const onDiscover = vi.fn()
-    render(<AiWorkspaceNavigation active={active} onTask={onTask} onDiscover={onDiscover} />)
+  it('切换选中项时替换的是图形本身，未选中项恢复原线框', () => {
+    const navigate = vi.fn()
+    const { rerender } = render(<AiWorkspaceNavigation active="task" onNavigate={navigate} />)
+    const svg = (name: string) => screen.getByRole('button', { name }).querySelector('svg')!.outerHTML
+    const outlines = new Map<string, string>()
+    for (const [key, label] of tabs) {
+      rerender(<AiWorkspaceNavigation active={key === 'task' ? 'library' : 'task'} onNavigate={navigate} />)
+      outlines.set(label, svg(label))
+    }
+    for (const [active] of tabs) {
+      rerender(<AiWorkspaceNavigation active={active} onNavigate={navigate} />)
+      for (const [key, label] of tabs) {
+        expect(svg(label) === outlines.get(label)).toBe(key !== active)
+      }
+    }
+  })
 
-    const navigation = within(screen.getByRole('navigation', { name: 'AI 工作区' }))
-    expect(navigation.getAllByRole('button')).toHaveLength(2)
-    const task = navigation.getByRole('button', { name: '任务' })
-    const discover = navigation.getByRole('button', { name: '发现' })
-    expect(navigation.getAllByRole('button', { current: 'page' })).toEqual([active === 'task' ? task : discover])
-    for (const button of [task, discover]) {
+  it.each(tabs)('从 %s 直达其他栏目，仅标记当前页', (active, label) => {
+    const navigate = vi.fn()
+    render(<AiWorkspaceNavigation active={active} onNavigate={navigate} />)
+    const nav = within(screen.getByRole('navigation', { name: 'AI 工作区' }))
+    expect(nav.getAllByRole('button').map((button) => button.textContent)).toEqual(tabs.map(([, name]) => name))
+    expect(nav.getAllByRole('button', { current: 'page' })).toEqual([nav.getByRole('button', { name: label })])
+    for (const [key, name] of tabs) {
+      const button = nav.getByRole('button', { name })
       button.focus()
       expect(button).toHaveFocus()
+      fireEvent.click(button)
+      expect(navigate.mock.calls).toEqual(key === active ? [] : [[key]])
+      navigate.mockClear()
     }
-
-    fireEvent.click(discover)
-    expect(onDiscover).toHaveBeenCalledTimes(1)
-    expect(onTask).not.toHaveBeenCalled()
-    fireEvent.click(task)
-    expect(onTask).toHaveBeenCalledTimes(1)
-    expect(onDiscover).toHaveBeenCalledTimes(1)
-  })
-})
-
-describe('AI 发现页', () => {
-  it('显示发现标题和三个可聚焦的入口', () => {
-    renderDiscoverHub()
-
-    expect(screen.getByRole('heading', { name: '发现' })).toBeVisible()
-    const entries = within(screen.getByRole('list')).getAllByRole('button')
-    expect(entries.map((entry) => entry.textContent)).toEqual(['发现', '库', '技能'])
-    for (const entry of entries) {
-      entry.focus()
-      expect(entry).toHaveFocus()
-    }
-  })
-
-  it.each([
-    ['发现', 'onOpenDiscover'],
-    ['库', 'onOpenLibrary'],
-    ['技能', 'onOpenSkills'],
-  ] as const)('点击%s入口只调用对应的旧功能回调', (label, callback) => {
-    const callbacks = renderDiscoverHub()
-    const entries = within(screen.getByRole('list'))
-
-    fireEvent.click(entries.getByRole('button', { name: label }))
-
-    for (const [name, handler] of Object.entries(callbacks)) {
-      expect(handler).toHaveBeenCalledTimes(name === callback ? 1 : 0)
-    }
-  })
-
-  it('发现内容不自带底栏', () => {
-    renderDiscoverHub()
-
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('button')).toHaveLength(3)
   })
 })

@@ -140,8 +140,24 @@
   padding: 14px 8px 5px 16px;
 }
 
-.ai-workspace-composer-model {
+.ai-workspace-composer-selectors {
   grid-area: model;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ai-workspace-composer-model-name {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ai-workspace-composer-level, .ai-workspace-composer-model > svg { flex: none; }
+.ai-workspace-composer-model:disabled { opacity: .52; cursor: default; }
+
+.ai-workspace-composer-model {
+  min-width: 0;
   display: inline-flex;
   justify-self: start;
   align-items: center;
@@ -185,8 +201,12 @@
   overflow-y: auto;
 }
 
+.ai-workspace-composer-model:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
 .ai-workspace-composer-icon:focus-visible,
-.ai-workspace-composer-model:focus-visible,
 .ai-workspace-composer-hold:focus-visible {
   outline: 2px solid var(--ai-composer-accent);
   outline-offset: 1px;

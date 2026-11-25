@@ -1,4 +1,5 @@
 export type ChatRole = 'user' | 'assistant'
+export type ChatThinkingLevel = 'auto' | 'low' | 'medium' | 'high' | 'max'
 
 export type ChatStreamStatus = 'streaming' | 'completed' | 'aborted' | 'error'
 
@@ -113,6 +114,8 @@ export interface ChatSessionMessage {
 }
 
 export interface ChatSessionDetail extends ChatSession {
+  model?: string | null
+  thinking_level?: ChatThinkingLevel | null
   theme_id: string | null
   tool_config: unknown
   message_count: number
@@ -138,6 +141,8 @@ export interface ChatStreamHttpRequest {
 
 export interface ChatStreamStartPayload {
   message: string
+  model: string | null
+  thinkingLevel: ChatThinkingLevel | null
   enableWebSearch?: boolean
   skillName?: string | null
   uploadedFiles?: Array<{

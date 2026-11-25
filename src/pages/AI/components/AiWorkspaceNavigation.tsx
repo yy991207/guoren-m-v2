@@ -1,5 +1,4 @@
-import { CompassOutline, MessageFill, MessageOutline, RightOutline } from 'antd-mobile-icons'
-import { useId } from 'react'
+import { MessageFill, MessageOutline } from 'antd-mobile-icons'
 import {
   AiDrawerMenuDiscoverIcon,
   AiDrawerMenuLibraryIcon,
@@ -7,71 +6,39 @@ import {
 } from './AiDrawerMenuIcons'
 import './AiWorkspaceNavigation.css'
 
+const entries = [
+  { key: 'task', label: '任务' },
+  { key: 'agents', label: '智能体', Icon: AiDrawerMenuDiscoverIcon },
+  { key: 'library', label: '库', Icon: AiDrawerMenuLibraryIcon },
+  { key: 'skills', label: '技能', Icon: AiDrawerMenuSkillsIcon },
+] as const
+
+export type AiWorkspaceTab = typeof entries[number]['key']
+
 type AiWorkspaceNavigationProps = {
-  active: 'task' | 'discover'
-  onTask: () => void
-  onDiscover: () => void
+  active: AiWorkspaceTab
+  onNavigate: (tab: AiWorkspaceTab) => void
 }
 
-type AiDiscoverHubProps = {
-  onOpenDiscover: () => void
-  onOpenLibrary: () => void
-  onOpenSkills: () => void
-}
-
-export function AiWorkspaceNavigation({ active, onTask, onDiscover }: AiWorkspaceNavigationProps) {
+export function AiWorkspaceNavigation({ active, onNavigate }: AiWorkspaceNavigationProps) {
   const TaskIcon = active === 'task' ? MessageFill : MessageOutline
 
   return (
     <nav aria-label="AI 工作区" className="ai-workspace-navigation">
-      <button
-        aria-current={active === 'task' ? 'page' : undefined}
-        className="ai-workspace-navigation__button"
-        type="button"
-        onClick={onTask}
-      >
-        <TaskIcon aria-hidden="true" width={22} height={22} />
-        <span>任务</span>
-      </button>
-      <button
-        aria-current={active === 'discover' ? 'page' : undefined}
-        className="ai-workspace-navigation__button"
-        type="button"
-        onClick={onDiscover}
-      >
-        <CompassOutline aria-hidden="true" width={22} height={22} />
-        <span>发现</span>
-      </button>
+      {entries.map((entry) => (
+        <button
+          aria-current={active === entry.key ? 'page' : undefined}
+          className="ai-workspace-navigation__button"
+          key={entry.key}
+          type="button"
+          onClick={() => { if (entry.key !== active) onNavigate(entry.key) }}
+        >
+          <span aria-hidden="true" className="ai-workspace-navigation__icon">
+            {entry.key === 'task' ? <TaskIcon width={22} height={22} /> : <entry.Icon size={22} filled={active === entry.key} />}
+          </span>
+          <span>{entry.label}</span>
+        </button>
+      ))}
     </nav>
-  )
-}
-
-export function AiDiscoverHub({ onOpenDiscover, onOpenLibrary, onOpenSkills }: AiDiscoverHubProps) {
-  const titleId = useId()
-  const entries = [
-    { label: '发现', Icon: AiDrawerMenuDiscoverIcon, onClick: onOpenDiscover },
-    { label: '库', Icon: AiDrawerMenuLibraryIcon, onClick: onOpenLibrary },
-    { label: '技能', Icon: AiDrawerMenuSkillsIcon, onClick: onOpenSkills },
-  ]
-
-  return (
-    <section aria-labelledby={titleId} className="ai-discover-hub">
-      <header className="ai-discover-hub__header">
-        <h1 id={titleId} className="ai-discover-hub__title">发现</h1>
-      </header>
-      <div className="ai-discover-hub__content">
-        <ul className="ai-discover-hub__list" role="list">
-          {entries.map(({ label, Icon, onClick }) => (
-            <li key={label}>
-              <button className="ai-discover-hub__entry" type="button" onClick={onClick}>
-                <span aria-hidden="true" className="ai-discover-hub__icon"><Icon size={20} /></span>
-                <span>{label}</span>
-                <RightOutline aria-hidden="true" className="ai-discover-hub__arrow" width={14} height={14} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </section>
   )
 }

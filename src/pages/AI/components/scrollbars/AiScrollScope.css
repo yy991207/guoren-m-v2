@@ -1,0 +1,45 @@
+/* 原容器继续负责滚动和滚动条拖动，只由工作区统一绘制可见的滑块。 */
+div[data-ai-scroll-scope] :not(.ai-library-hub-preview-body, .ai-library-hub-preview-body *, input, textarea, select) {
+  scrollbar-color: transparent transparent;
+}
+
+@supports selector(::-webkit-scrollbar) {
+  div[data-ai-scroll-scope] :not(.ai-library-hub-preview-body, .ai-library-hub-preview-body *, input, textarea, select) {
+    scrollbar-color: auto;
+    scrollbar-width: auto;
+    &::-webkit-scrollbar { width: 6px; height: 6px; background: transparent; }
+    &::-webkit-scrollbar-thumb,
+    &::-webkit-scrollbar-track,
+    &::-webkit-scrollbar-corner { background: transparent; border: 0; box-shadow: none; }
+    &::-webkit-scrollbar-button { display: none; }
+  }
+}
+
+/* 标准滚动条颜色是继承属性，预览正文和输入控件不跟随页面。 */
+div[data-ai-scroll-scope] :is(.ai-library-hub-preview-body, input, textarea, select) { scrollbar-color: auto; }
+
+.ai-scroll-indicators {
+  position: fixed;
+  inset: 0;
+  z-index: 5100;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 1;
+}
+
+.ai-scroll-indicators[data-fading] {
+  opacity: 0;
+  transition: opacity 150ms ease-out;
+}
+
+.ai-scroll-indicators > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 999px;
+  background: #b8bcc1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-scroll-indicators[data-fading] { transition: none; }
+}

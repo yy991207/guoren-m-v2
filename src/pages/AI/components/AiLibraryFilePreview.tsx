@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import { FilePreviewRenderer } from './file-preview/file-preview-renderer'
+import { resolvePreviewLanguage, type PreviewLanguage } from './file-preview/preview-language'
 import { fetchClassroomGenerateStatus, resolveClassroomPreviewState, type ClassroomPreviewState } from '../../../services/classroom'
 import { fetchCourseReviewResult, resolveCourseReviewPreviewPayload, type CourseReviewPreviewPayload } from '../../../services/courseReview'
 import {
@@ -19,24 +19,12 @@ type AiLibraryFilePreviewProps = {
   onOpenSession: (sessionId: string) => void
 }
 
-type LibraryPreviewLanguage = 'html' | 'markdown' | 'text' | 'json' | null
-
 function BackIcon() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="15 18 9 12 15 6" />
     </svg>
   )
-}
-
-function isHtmlPreviewFile(fileName: string): boolean {
-  const ext = fileName.split('.').pop()?.toLowerCase() || ''
-  return ['html', 'htm'].includes(ext)
-}
-
-function isMarkdownPreviewFile(fileName: string): boolean {
-  const ext = fileName.split('.').pop()?.toLowerCase() || ''
-  return ['md', 'markdown'].includes(ext)
 }
 
 function isImageFile(detail: LibraryFileDetail): boolean {
@@ -52,18 +40,6 @@ function isImSession(sessionId: string): boolean {
   return sessionId.includes('_im_')
 }
 
-function resolveDocumentPreviewLanguage(detail: LibraryFileDetail): LibraryPreviewLanguage {
-  if (isHtmlPreviewFile(detail.fileName)) {
-    return 'html'
-  }
-
-  if (isMarkdownPreviewFile(detail.fileName)) {
-    return 'markdown'
-  }
-
-  return 'text'
-}
-
 export default function AiLibraryFilePreview({
   selectedFile,
   initialDetail = null,
@@ -73,8 +49,8 @@ export default function AiLibraryFilePreview({
 }: AiLibraryFilePreviewProps) {
   const [previewDetail, setPreviewDetail] = useState<LibraryFileDetail | null>(null)
   const [previewContent, setPreviewContent] = useState('')
-  const [previewLanguage, setPreviewLanguage] = useState<LibraryPreviewLanguage>(null)
-  const [previewLoading, setPreviewLoading] = useState(false)
+  const [previewLanguage, setPreviewLanguage] = useState<PreviewLanguage | null>(null)
+  const [previewLoading, setPreviewLoading] = useState(true)
   const [previewError, setPreviewError] = useState('')
   const [classroomPreview, setClassroomPreview] = useState<ClassroomPreviewState | null>(null)
   const [reviewPreview, setReviewPreview] = useState<CourseReviewPreviewPayload | null>(null)
@@ -153,21 +129,16 @@ export default function AiLibraryFilePreview({
           return
         }
 
-        if (isImageFile(detail) || !detail.fileUrl) {
+        if (isImageFile(detail) || detail.fileType === 'video' || detail.fileType === 'audio') {
           return
         }
 
+        const language = resolvePreviewLanguage(detail.fileName)
+        setPreviewLanguage(language)
+        if (!language || !detail.fileUrl) return
+
         const nextContent = await fetchLibraryPreviewContent(detail.fileUrl, controller.signal)
-
-        if (!controller.signal.aborted) {
-          setPreviewContent(nextContent)
-
-          if (detail.fileType === 'document') {
-            setPreviewLanguage(resolveDocumentPreviewLanguage(detail))
-          } else {
-            setPreviewLanguage(isHtmlPreviewFile(detail.fileName) ? 'html' : 'text')
-          }
-        }
+        if (!controller.signal.aborted) setPreviewContent(nextContent)
       } catch (loadError) {
         if (!controller.signal.aborted) {
           setPreviewError(loadError instanceof Error ? loadError.message : '文件详情加载失败')
@@ -189,17 +160,13 @@ export default function AiLibraryFilePreview({
   const canViewSession = useMemo(() => {
     return showOpenSessionLink && Boolean(selectedFile.sessionId) && !isImSession(selectedFile.sessionId)
   }, [selectedFile.sessionId, showOpenSessionLink])
-  const showImage = previewFile ? isImageFile(previewFile) : false
-  const showHtml = previewLanguage === 'html' && previewContent.trim().length > 0
-  const showMarkdown = previewLanguage === 'markdown' && previewContent.trim().length > 0
-  const showText = (previewLanguage === 'text' || previewLanguage === 'json') && previewContent.trim().length > 0
-  const showClassroom = previewFile?.fileType === 'classroom' && classroomPreview !== null
-  const showReviewPending = previewFile?.fileType === 'review' && Boolean(reviewPreview?.pendingMessage)
+  const isImage = previewFile !== null && isImageFile(previewFile)
+  const showBusinessStatus = !previewLoading && !previewError
 
   return (
     <div className="ai-library-hub-page">
       <div className="ai-library-hub-preview-topbar">
-        <button className="ai-library-hub-header-btn" type="button" onClick={onBack}>
+        <button aria-label="返回" className="ai-library-hub-header-btn" type="button" onClick={onBack}>
           <BackIcon />
         </button>
         <div className="ai-library-hub-preview-title">{previewName}</div>
@@ -217,59 +184,25 @@ export default function AiLibraryFilePreview({
       </div>
 
       <div className="ai-library-hub-preview-body">
-        <div className="ai-library-file-preview-layout">
-          <div className="ai-library-file-preview-content">
-            {previewLoading && !previewFile ? <div className="ai-library-hub-empty">文件详情加载中...</div> : null}
-            {previewError ? <div className="ai-library-hub-empty">{previewError}</div> : null}
-            {!previewLoading && !previewError && previewFile && previewFile.fileType === 'classroom' && !showClassroom ? (
-              <div className="ai-library-hub-empty">课堂结果暂时没有可展示内容。</div>
-            ) : null}
-            {!previewLoading && !previewError && showClassroom && classroomPreview && classroomPreview.tone !== 'ready' ? (
-              <div className="ai-library-hub-status-card">
-                <div className={`ai-library-hub-status-badge is-${classroomPreview.tone}`}>{classroomPreview.statusLabel}</div>
-                <div className="ai-library-hub-status-desc">{classroomPreview.detail}</div>
-              </div>
-            ) : null}
-            {!previewLoading && !previewError && showReviewPending ? (
-              <div className="ai-library-hub-empty">{reviewPreview?.pendingMessage}</div>
-            ) : null}
-            {!previewLoading && !previewError && previewFile && !previewFile.fileUrl && previewFile.fileType === 'document' ? (
-              <div className="ai-library-hub-empty">当前文件暂无可预览内容。</div>
-            ) : null}
-            {!previewLoading && !previewError && previewFile && showImage ? (
-              <div className="ai-library-hub-image-wrap">
-                <img
-                  alt={previewName}
-                  className="ai-library-hub-image"
-                  decoding="async"
-                  loading="lazy"
-                  src={previewFile.fileUrl}
-                />
-              </div>
-            ) : null}
-            {!previewLoading && !previewError && showHtml ? (
-              <iframe
-                className="ai-library-hub-frame-preview"
-                sandbox="allow-same-origin allow-scripts allow-forms"
-                srcDoc={previewContent}
-                title={previewName}
-              />
-            ) : null}
-            {!previewLoading && !previewError && showMarkdown ? (
-              <div className="ai-library-hub-markdown-preview">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {previewContent}
-                </ReactMarkdown>
-              </div>
-            ) : null}
-            {!previewLoading && !previewError && showText ? (
-              <pre className="ai-library-hub-text-preview">{previewContent}</pre>
-            ) : null}
-            {!previewLoading && !previewError && previewFile && !showImage && !showHtml && !showMarkdown && !showText && !showClassroom && !showReviewPending ? (
-              <div className="ai-library-hub-empty">当前文件暂时没有可展示的文档预览。</div>
-            ) : null}
+        {showBusinessStatus && classroomPreview && classroomPreview.tone !== 'ready' ? (
+          <div className="ai-library-hub-status-card" role="status">
+            <div className={`ai-library-hub-status-badge is-${classroomPreview.tone}`}>{classroomPreview.statusLabel}</div>
+            <div className="ai-library-hub-status-desc">{classroomPreview.detail}</div>
           </div>
-        </div>
+        ) : showBusinessStatus && reviewPreview?.pendingMessage ? (
+          <div className="ai-library-hub-empty" role="status">{reviewPreview.pendingMessage}</div>
+        ) : (
+          <FilePreviewRenderer
+            allowHtmlScripts={previewFile?.fileType === 'classroom'}
+            content={previewContent}
+            emptyMessage={previewLanguage || isImage ? '当前文件暂无可预览内容。' : undefined}
+            errorMessage={previewError}
+            fileName={previewName}
+            imageUrl={isImage ? previewFile.fileUrl : undefined}
+            language={previewLanguage}
+            loading={previewLoading}
+          />
+        )}
       </div>
     </div>
   )

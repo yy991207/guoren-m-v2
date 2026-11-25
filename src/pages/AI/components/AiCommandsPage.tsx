@@ -1,8 +1,10 @@
+import { AiScrollScope } from './scrollbars/AiScrollScope'
 import type { CommandApiItem } from '../../../services/commands'
 
 export type AiCommandsPageTabKey = 'best-practice' | 'recommended-prompts' | 'my-prompts'
 
 type AiCommandsPageProps = {
+  workspaceScrollbars: boolean
   activeTab: AiCommandsPageTabKey
   bestPractices: CommandApiItem[]
   error: string
@@ -47,6 +49,7 @@ function renderCommandIcon(command: CommandApiItem) {
 }
 
 export default function AiCommandsPage({
+  workspaceScrollbars,
   activeTab,
   bestPractices,
   error,
@@ -60,7 +63,7 @@ export default function AiCommandsPage({
   const { emptyText, items } = getPromptListState(activeTab, myCommands, officialCommands)
 
   return (
-    <div className="ai-commands-page">
+    <AiScrollScope enabled={workspaceScrollbars} className="ai-commands-page">
       <div className="ai-commands-page-header">
         <button className="ai-commands-page-back" type="button" onClick={onBack} aria-label="返回">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -138,6 +141,6 @@ export default function AiCommandsPage({
           )
         ) : null}
       </div>
-    </div>
+    </AiScrollScope>
   )
 }

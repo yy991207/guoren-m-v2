@@ -722,17 +722,20 @@
   position: relative;
 }
 
-/* 原功能页在工作区内占据内容行；独立预览和弹层仍保留各自的定位。 */
+/* 栏目页和列表内详情共享页面底色，卡片、输入框及文件正文由各组件管理。 */
 .ai-workspace-feature > :is(.ai-discover-page, .ai-library-hub-page, .ai-skill-community-page, .ai-skill-detail-page, .ai-my-skills-page) {
   position: static;
   z-index: auto;
   flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
+  background: var(--ai-workspace-background);
 }
 
-.ai-page.has-workspace-navigation {
-  --ai-workspace-background: #f6f6f6;
+.ai-page.has-workspace-navigation,
+.ai-workspace-feature :is(.ai-skill-detail-header, .ai-skill-detail-content, .ai-skill-detail-footer),
+.ai-page.has-workspace-navigation :is(.ai-agent-config-page, .ai-agent-config-header, .ai-custom-agent-conversation-page, .ai-agent-chat-preview, .ai-agent-chat-preview-bottom),
+.ai-page.has-workspace-navigation > .ai-custom-agent-conversation-page ~ .ai-chat-skill-picker-page {
   background: var(--ai-workspace-background);
 }
 
@@ -1851,7 +1854,7 @@
   flex-shrink: 0;
 }
 
-/* 发现全屏页 */
+/* 智能体列表 */
 .ai-discover-page {
   position: absolute;
   inset: 0;
@@ -1892,6 +1895,7 @@
 }
 
 .ai-discover-header-title {
+  margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: #222;
@@ -1918,46 +1922,6 @@
 
 .ai-discover-search {
   flex: 1;
-  min-width: 0;
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  background: #f7f7f7;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.ai-discover-search:focus-within {
-  border-color: #1677ff;
-  background: #fff;
-  box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.08);
-}
-
-.ai-discover-search-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #9ca3af;
-  flex-shrink: 0;
-}
-
-.ai-discover-search-input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: #1f2329;
-  font-size: 14px;
-  line-height: 1;
-  padding: 0;
-}
-
-.ai-discover-search-input::placeholder {
-  color: #9ca3af;
 }
 
 .ai-discover-create-btn {
@@ -3897,46 +3861,6 @@
   border-bottom: 1px solid #edf1f5;
 }
 
-.ai-org-member-picker-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid #d9dee7;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.ai-org-member-picker-search:focus-within {
-  border-color: #4a7cff;
-  box-shadow: 0 0 0 3px rgba(74, 124, 255, 0.1);
-}
-
-.ai-org-member-picker-search-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #8892a0;
-}
-
-.ai-org-member-picker-search-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: #1f2329;
-  font-size: 13px;
-  line-height: 1.4;
-}
-
-.ai-org-member-picker-search-input:focus {
-  outline: none;
-}
-
-.ai-org-member-picker-search-input::placeholder {
-  color: #97a0ac;
-}
-
 .ai-org-member-picker-breadcrumb {
   display: flex;
   flex-wrap: wrap;
@@ -4212,45 +4136,6 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.ai-selection-sheet-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 40px;
-  padding: 0 12px;
-  border: 1px solid #d9dee7;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.ai-selection-sheet-search:focus-within {
-  border-color: #4a7cff;
-  box-shadow: 0 0 0 3px rgba(74, 124, 255, 0.1);
-}
-
-.ai-selection-sheet-search-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #8892a0;
-}
-
-.ai-selection-sheet-search-input {
-  width: 100%;
-  border: none;
-  background: transparent;
-  color: #1f2329;
-  font-size: 13px;
-}
-
-.ai-selection-sheet-search-input:focus {
-  outline: none;
-}
-
-.ai-selection-sheet-search-input::placeholder {
-  color: #97a0ac;
 }
 
 .ai-selection-sheet-body {
@@ -4625,15 +4510,6 @@
 
 .ai-skill-community-search {
   margin-top: 8px;
-  min-height: 40px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  color: #999;
-  font-size: 14px;
 }
 
 .ai-skill-community-section-header {
@@ -4894,18 +4770,9 @@
   color: #222;
 }
 
-.ai-chat-skill-picker-search {
+.ai-chat-skill-picker-search,
+.ai-my-skills-search {
   margin: 8px 16px 0;
-  min-height: 40px;
-  background: #f3f4f6;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  color: #999;
-  font-size: 14px;
-  flex-shrink: 0;
 }
 
 .ai-chat-skill-picker-list {
@@ -5086,20 +4953,6 @@
 .ai-my-skills-actions {
   width: 40px;
   height: 40px;
-  flex-shrink: 0;
-}
-
-.ai-my-skills-search {
-  margin: 8px 16px 0;
-  min-height: 40px;
-  background: #f3f4f6;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 12px;
-  color: #999;
-  font-size: 14px;
   flex-shrink: 0;
 }
 
@@ -5328,20 +5181,6 @@
   color: #8b8e95;
   font-size: 13px;
   line-height: 1.5;
-}
-
-.ai-inline-search-input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  background: transparent;
-  outline: none;
-  font-size: 14px;
-  color: #333;
-}
-
-.ai-inline-search-input::placeholder {
-  color: #a0a4ab;
 }
 
 .ai-page-draft-attachments {

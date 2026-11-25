@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useVoiceInput } from '../../../hooks/useVoiceInput'
 import { AiWorkspaceComposer } from './AiWorkspaceComposer'
 import type { AiWorkspaceComposerProps } from './AiWorkspaceComposer'
+import { makeModelControls } from '../../../test/fixtures/chatModels'
 
 vi.mock('../../../hooks/useVoiceInput', () => ({ useVoiceInput: vi.fn() }))
 vi.mock('./AiWorkspaceModelSheet', () => ({
@@ -84,6 +85,8 @@ function TestComposer(props: TestComposerProps) {
 function renderComposer(overrides: Partial<TestComposerProps> = {}) {
   let props = {
     active: true,
+    modelControls: makeModelControls(),
+    modelBusy: false,
     canRecord: true,
     canSubmit: true,
     isResponding: false,
@@ -163,7 +166,19 @@ describe('AI 工作区对话输入', () => {
     expect(row).toHaveAttribute('data-expanded', 'false')
   })
 
-  it('打开和关闭模型占位弹层不发送、不清空草稿', () => {
+  it('切换为不支持强度的模型时隐藏档位，恢复历史或回复中不能改选择', () => {
+    const { update } = renderComposer()
+    expect(screen.getByRole('button', { name: '思考强度：高' })).toBeEnabled()
+    update({ modelBusy: true })
+    expect(screen.getByRole('button', { name: '思考强度：高' })).toBeDisabled()
+    update({ modelBusy: false, isResponding: true })
+    expect(screen.getByRole('button', { name: '选择模型：Auto' })).toBeDisabled()
+    update({ modelControls: makeModelControls({ label: '模型 C', levels: [], thinkingLevel: null }) })
+    expect(screen.getByRole('button', { name: '选择模型：模型 C' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: /^思考强度/ })).not.toBeInTheDocument()
+  })
+
+  it('打开和关闭模型弹层不发送、不清空草稿', () => {
     const { props } = renderComposer()
     const model = screen.getByRole('button', { name: '选择模型：Auto' })
     fireEvent.click(model)

@@ -67,6 +67,7 @@ type AiAgentConfigPageProps = {
   onBack: () => void
   onClose?: () => void
   onDraftChange: (draft: AiAgentConfigDraft) => void
+  onSkillInstalled: (name: string) => void
   onPublishSuccess?: (payload: AiAgentPublishSuccessPayload) => void | Promise<void>
 }
 
@@ -288,6 +289,7 @@ export function AiAgentConfigPage({
   onBack,
   onClose,
   onDraftChange,
+  onSkillInstalled,
   onPublishSuccess,
 }: AiAgentConfigPageProps) {
   const pageTitle = mode === 'edit' ? '编辑智能体' : '创建智能体'
@@ -610,7 +612,9 @@ export function AiAgentConfigPage({
 
     try {
       if (targetSkill.source === 'clawhub') {
-        await installClawhubSkill(targetSkill.skillName || targetSkill.id)
+        const name = targetSkill.skillName || targetSkill.id
+        await installClawhubSkill(name)
+        onSkillInstalled(name)
       }
 
       const normalizedSkill = { ...targetSkill }
@@ -635,7 +639,7 @@ export function AiAgentConfigPage({
     } finally {
       setRecommendedInstallingSkillId('')
     }
-  }, [isSkillSelected, recommendedInstallingSkillId, recommendedSkillOptions, selectedSkills, updateDraft])
+  }, [isSkillSelected, onSkillInstalled, recommendedInstallingSkillId, recommendedSkillOptions, selectedSkills, updateDraft])
 
   const activeSkillSheetOptions = skillSheetView === 'added'
     ? addedSkillOptions
@@ -1267,7 +1271,7 @@ export function AiAgentConfigPage({
     <div className="ai-agent-config-page">
       <div className="ai-agent-config-header">
         <button
-          aria-label="返回发现页"
+          aria-label="返回上一页"
           className="ai-agent-config-back"
           type="button"
           onClick={onBack}

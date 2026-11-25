@@ -1,15 +1,14 @@
-import { useId } from 'react'
+import { useId, useLayoutEffect, useMemo, useRef } from 'react'
 import { AddCircleOutline } from 'antd-mobile-icons'
-import type { ChatSession } from '../../../services/chat/types'
+import type { GroupedChatSessions } from '../../../services/chat/session'
+import { useSidebarSessionSelection } from '../hooks/useSidebarSessionSelection'
 import { AiDrawerSessionGroup } from './AiDrawerSessionGroup'
+import { AiSessionDeleteDialog } from './AiSessionDeleteDialog'
 import './AiTaskSidebarContent.css'
 
 type AiTaskSidebarContentProps = {
-  groups: {
-    today: ChatSession[]
-    within7Days: ChatSession[]
-    beyond7Days: ChatSession[]
-  }
+  groups: GroupedChatSessions
+  open: boolean
   activeSessionId: string | null
   removingSessionIds: Set<string>
   isLoading: boolean
@@ -17,84 +16,80 @@ type AiTaskSidebarContentProps = {
   onTasksExpandedChange: (expanded: boolean) => void
   onNewTask: () => void
   onOpenSession: (sessionId: string) => void
+  onRemoveOne: (sessionId: string, signal: AbortSignal) => Promise<void>
+  onRefresh: (signal: AbortSignal) => Promise<boolean>
 }
 
+const sections = [['today', '今天'], ['within7Days', '7天内'], ['beyond7Days', '7天外']] as const
+
 export function AiTaskSidebarContent({
-  groups,
-  activeSessionId,
-  removingSessionIds,
-  isLoading,
-  tasksExpanded,
-  onTasksExpandedChange,
-  onNewTask,
-  onOpenSession,
+  groups, open, activeSessionId, removingSessionIds, isLoading, tasksExpanded,
+  onTasksExpandedChange, onNewTask, onOpenSession, onRemoveOne, onRefresh,
 }: AiTaskSidebarContentProps) {
   const tasksId = useId()
   const toggleId = `${tasksId}-toggle`
-  const hasSessions = groups.today.length > 0
-    || groups.within7Days.length > 0
-    || groups.beyond7Days.length > 0
+  const hasSessions = sections.some(([key]) => groups[key].length > 0)
+  const availableIds = useMemo(() => sections.flatMap(([key]) => groups[key].map((s) => s.session_id))
+    .filter((id) => !removingSessionIds.has(id)), [groups, removingSessionIds])
+  const selection = useSidebarSessionSelection({ open, availableIds, removeOne: onRemoveOne, refresh: onRefresh })
+  const { selecting, selected, allSelected, notice, batch } = selection
+  const manageRef = useRef<HTMLButtonElement>(null)
+  const selectAllRef = useRef<HTMLButtonElement>(null)
+  const newRef = useRef<HTMLButtonElement>(null)
+  const lastMode = useRef(selecting)
+  useLayoutEffect(() => {
+    if (open && lastMode.current !== selecting) {
+      const target = selecting ? selectAllRef.current : (manageRef.current?.disabled ? newRef.current : manageRef.current)
+      target?.focus({ preventScroll: true })
+    }
+    lastMode.current = selecting
+  }, [open, selecting])
 
   return (
     <div className="ai-task-sidebar-content">
-      <button className="ai-task-sidebar-content__new" type="button" onClick={onNewTask}>
-        <AddCircleOutline aria-hidden="true" fontSize={18} />
-        <span>新建任务</span>
-      </button>
-
-      <button
-        aria-controls={tasksId}
-        aria-expanded={tasksExpanded}
-        className="ai-task-sidebar-content__toggle"
-        id={toggleId}
-        type="button"
-        onClick={() => onTasksExpandedChange(!tasksExpanded)}
-      >
-        <span>任务</span>
-        <svg className="ai-task-sidebar-content__chevron" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="m4 6 4 4 4-4" />
-        </svg>
-      </button>
-
-      {/* 只隐藏历史区，不卸载会话行，收起后再展开仍保留列表的滚动位置。 */}
-      <div
-        aria-busy={isLoading}
-        aria-labelledby={toggleId}
-        className="ai-task-sidebar-content__history"
-        hidden={!tasksExpanded}
-        id={tasksId}
-        role="region"
-      >
+      {selecting ? (
+        <div className="ai-task-selection-bar">
+          <button aria-checked={allSelected || (selected.size ? 'mixed' : false)} disabled={isLoading || !availableIds.length} ref={selectAllRef} role="checkbox" type="button" onClick={selection.toggleAll}>
+            <span aria-hidden="true" className="ai-task-check" />全选
+          </button>
+          <span aria-live="polite">已选 {selected.size} 条</span>
+          <button type="button" onClick={() => selection.changeMode(false)}>取消</button>
+        </div>
+      ) : (
+        <button className="ai-task-sidebar-content__new" ref={newRef} type="button" onClick={onNewTask}>
+          <AddCircleOutline aria-hidden="true" fontSize={18} /><span>新建任务</span>
+        </button>
+      )}
+      <div className="ai-task-section-heading">
+        <button aria-controls={tasksId} aria-expanded={tasksExpanded} className="ai-task-sidebar-content__toggle" id={toggleId} type="button" onClick={() => onTasksExpandedChange(!tasksExpanded)}>
+          <span>任务</span>
+          <svg className="ai-task-sidebar-content__chevron" aria-hidden="true" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="m4 6 4 4 4-4" /></svg>
+        </button>
+        {!selecting && (
+          <button
+            aria-label="多选对话" className="ai-task-manage" disabled={isLoading || !availableIds.length} ref={manageRef} type="button"
+            onClick={() => { if (!tasksExpanded) onTasksExpandedChange(true); selection.changeMode(true) }}
+          >
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m3 6 1.5 1.5L7 4.5M10 6h10M3 12l1.5 1.5L7 10.5M10 12h10M3 18l1.5 1.5L7 16.5M10 18h10" />
+            </svg>
+          </button>
+        )}
+      </div>
+      {/* 折叠只隐藏历史区，不卸载节点，因此列表滚动位置保持不变。 */}
+      <div aria-busy={isLoading} aria-labelledby={toggleId} className="ai-task-sidebar-content__history" hidden={!tasksExpanded} id={tasksId} role="region">
         {isLoading ? (
           <div className="ai-task-sidebar-content__empty" role="status">正在刷新会话…</div>
         ) : !hasSessions ? (
           <div className="ai-task-sidebar-content__empty" role="status">还没有历史会话</div>
-        ) : (
-          <>
-            <AiDrawerSessionGroup
-              activeSessionId={activeSessionId}
-              items={groups.today}
-              removingSessionIds={removingSessionIds}
-              title="今天"
-              onOpenSession={onOpenSession}
-            />
-            <AiDrawerSessionGroup
-              activeSessionId={activeSessionId}
-              items={groups.within7Days}
-              removingSessionIds={removingSessionIds}
-              title="7天内"
-              onOpenSession={onOpenSession}
-            />
-            <AiDrawerSessionGroup
-              activeSessionId={activeSessionId}
-              items={groups.beyond7Days}
-              removingSessionIds={removingSessionIds}
-              title="7天外"
-              onOpenSession={onOpenSession}
-            />
-          </>
-        )}
+        ) : sections.map(([key, title]) => (
+          <AiDrawerSessionGroup key={key} activeSessionId={activeSessionId} items={groups[key]} removingSessionIds={removingSessionIds}
+            selection={selecting ? selection : undefined} title={title} onOpenSession={onOpenSession} />
+        ))}
       </div>
+      {notice && <p className="ai-task-selection-notice" role="status">{notice}</p>}
+      {selecting && <button className="ai-task-delete" disabled={!selected.size || isLoading} type="button" onClick={selection.askDelete}>删除对话</button>}
+      {open && batch && <AiSessionDeleteDialog total={batch.ids.length} done={batch.done} running={batch.running} onCancel={selection.cancelConfirm} onConfirm={selection.confirmDelete} />}
     </div>
   )
 }

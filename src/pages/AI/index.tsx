@@ -40,13 +40,10 @@ import {
   buildSkillInitialPrompt,
   deleteCreatedSkill,
   fetchAddedSkills,
-  fetchClawhubSkills,
   fetchCreatedSkills,
   fetchUserSkills,
-  fetchOfficialSkills,
   installClawhubSkill,
   removeAddedSkill,
-  searchClawhubSkills,
   type SkillSummaryItem,
 } from '../../services/skills'
 import { viewCustomAgent, type CustomAgentDetail } from '../../services/customAgents'
@@ -69,7 +66,9 @@ import AiLibraryFilePreview from './components/AiLibraryFilePreview'
 import { AiManageSkillCard } from './components/AiManageSkillCard'
 import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
-import { AiDiscoverHub, AiWorkspaceNavigation } from './components/AiWorkspaceNavigation'
+import { AiScrollScope } from './components/scrollbars/AiScrollScope'
+import { AiSearchField } from './components/AiSearchField'
+import { AiWorkspaceNavigation, type AiWorkspaceTab } from './components/AiWorkspaceNavigation'
 import { AiWorkspacePlusSheet } from './components/AiWorkspacePlusSheet'
 import { AiWorkspaceWelcome } from './components/AiWorkspaceWelcome'
 import { AiSidebarToggleIcon, AiWorkspaceSidebar } from './components/AiWorkspaceSidebar'
@@ -77,6 +76,7 @@ import { AiTaskSidebarContent } from './components/AiTaskSidebarContent'
 import { AiNameAvatar } from './components/AiNameAvatar'
 import AiSidebarLibraryPage from './components/AiSidebarLibraryPage'
 import AiSkillDetailPage from './components/AiSkillDetailPage'
+import { useSkillCommunity } from './hooks/useSkillCommunity'
 import { resolveArtifactPreviewUrl, useAiChatRuntime, type ActiveAgentContext } from './hooks/useAiChatRuntime'
 import {
   normalizeSessionArtifactPreviewFilePath,
@@ -368,14 +368,12 @@ export default function AIPage({
   const [tasksExpanded, setTasksExpanded] = useState(true)
   const sidebarId = useId()
   const pageRef = useRef<HTMLDivElement>(null)
-  const [showDiscoverHub, setShowDiscoverHub] = useState(false)
+  const [workspaceTab, setWorkspaceTab] = useState<AiWorkspaceTab>('task')
   const [showPlusSheet, setShowPlusSheet] = useState(false)
-  const [showSkillsPage, setShowSkillsPage] = useState(false)
+  const showSkillsPage = workspaceTab === 'skills'
   const [showSkillSelectorPage, setShowSkillSelectorPage] = useState(false)
   const [showFileMenu, setShowFileMenu] = useState(false)
   const [showLibraryPage, setShowLibraryPage] = useState(false)
-  const [showSidebarLibrary, setShowSidebarLibrary] = useState(false)
-  const [showDiscoverPage, setShowDiscoverPage] = useState(false)
   const [showCustomAgentConversationPage, setShowCustomAgentConversationPage] = useState(false)
   const [showAgentConfigPage, setShowAgentConfigPage] = useState(false)
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false)
@@ -396,10 +394,10 @@ export default function AIPage({
   const [featuredGroupIndex, setFeaturedGroupIndex] = useState(0)
   const [clawhubGroupIndex, setClawhubGroupIndex] = useState(0)
   const [skillSelectorSearchValue, setSkillSelectorSearchValue] = useState('')
-  const [debouncedSkillSearchValue, setDebouncedSkillSearchValue] = useState('')
   const [mySkillSearchValue, setMySkillSearchValue] = useState('')
-  const [officialSkills, setOfficialSkills] = useState<SkillSummaryItem[]>([])
-  const [communitySkills, setCommunitySkills] = useState<SkillSummaryItem[]>([])
+  const { official, clawhub, setSkillSelected } = useSkillCommunity(showSkillsPage, skillSearchValue)
+  const { items: officialSkills } = official
+  const { items: communitySkills } = clawhub
   const [selectedSkillDetail, setSelectedSkillDetail] = useState<SkillSummaryItem | null>(null)
   const [skillDetailReturnTarget, setSkillDetailReturnTarget] = useState<'community' | 'my-skills'>('community')
   const [skillActionLoadingId, setSkillActionLoadingId] = useState<string | null>(null)
@@ -407,8 +405,6 @@ export default function AIPage({
   const [deleteTargetManageSkill, setDeleteTargetManageSkill] = useState<SkillSummaryItem | null>(null)
   const [addedSkills, setAddedSkills] = useState<SkillSummaryItem[]>([])
   const [createdSkills, setCreatedSkills] = useState<SkillSummaryItem[]>([])
-  const [skillsLoading, setSkillsLoading] = useState(false)
-  const [skillsError, setSkillsError] = useState('')
   const [mySkillsLoading, setMySkillsLoading] = useState(false)
   const [mySkillsError, setMySkillsError] = useState('')
   const [userSkills, setUserSkills] = useState<SkillSummaryItem[]>([])
@@ -454,12 +450,16 @@ export default function AIPage({
     isLoadingSessions,
     isResponding,
     isStopping,
+    modelBusy,
+    modelControls,
     messages,
     activateAgent,
     clearActiveAgent,
     openSession,
     removeDraftAttachment,
     removeSession,
+    removeSessionFromList,
+    refreshSessions,
     requestError,
     routeSessionId,
     selectedArtifact,
@@ -556,9 +556,9 @@ export default function AIPage({
   const canEditCurrentConversationCustomAgent = useMemo(() => (
     Boolean(currentConversationCustomAgentDetail && currentConversationCustomAgentDetail.creator_user_id === currentUserId)
   ), [currentConversationCustomAgentDetail, currentUserId])
-  const isDiscoverActive = showDiscoverHub || showSidebarLibrary || showDiscoverPage || showSkillsPage || showMySkillsPage
+  const isFeatureActive = workspaceTab !== 'task'
   const isAiMainPageVisible = !showDrawer
-    && !isDiscoverActive
+    && !isFeatureActive
     && !showCustomAgentConversationPage
     && !showSkillSelectorPage
     && !showLibraryPage
@@ -584,27 +584,11 @@ export default function AIPage({
     { key: 'folder', label: '选取文件', icon: 'folder' },
   ]
 
-  const openSkillsPage = () => {
-    setShowPlusSheet(false)
-    setShowFileMenu(false)
-    setSkillSearchValue('')
-    setSelectedSkillDetail(null)
-    setShowSidebarLibrary(false)
-    setShowDiscoverPage(false)
-    setShowMySkillsPage(false)
-    setShowSkillSelectorPage(false)
-    setShowAgentConfigPage(false)
-    setShowCreateAgentModal(false)
-    setShowDrawer(false)
-    setShowDiscoverHub(false)
-    setShowSkillsPage(true)
-  }
-
   const handleCreateSkillByChat = () => {
     setShowCreateSkillSheet(false)
     setShowPlusSheet(false)
     setShowFileMenu(false)
-    setShowSkillsPage(false)
+    setWorkspaceTab('task')
     setShowMySkillsPage(false)
     setShowSkillSelectorPage(false)
     setShowAgentConfigPage(false)
@@ -644,50 +628,31 @@ export default function AIPage({
     setShowLibraryPage(true)
   }
 
-  const openSidebarLibraryPage = () => {
-    setShowDrawer(false)
-    setShowDiscoverHub(false)
-    setShowDiscoverPage(false)
-    setShowSkillsPage(false)
-    setShowMySkillsPage(false)
-    setShowAgentConfigPage(false)
-    setShowCreateAgentModal(false)
-    setShowSidebarLibrary(true)
-  }
-
-  // 切回会话时收起导航页面，但保留当前会话和草稿。
-  const closeNavigationOverlays = () => {
-    setShowDrawer(false)
-    setShowCreateSkillSheet(false)
-    setShowDiscoverHub(false)
-    setShowSidebarLibrary(false)
-    setShowDiscoverPage(false)
-    setShowCustomAgentConversationPage(false)
-    setShowSkillsPage(false)
-    setShowMySkillsPage(false)
-    setShowSkillSelectorPage(false)
-    setShowLibraryPage(false)
-    setShowAgentConfigPage(false)
-    setShowCreateAgentModal(false)
-  }
-
-  const openDiscoverHub = () => {
+  const navigateWorkspace = (next: AiWorkspaceTab) => {
     const scroller = scrollerRef.current
-    if (!isDiscoverActive && scroller) {
+    // 只在离开任务时记位置，栏目之间的切换不能覆盖原会话的滚动记录。
+    if (workspaceTab === 'task' && next !== 'task' && scroller) {
       workspaceScrollRef.current = {
         sessionId: routeSessionId,
         top: scroller.scrollTop,
         follow: isScrollerNearBottom(scroller),
       }
     }
-    closeNavigationOverlays()
-    setShowDiscoverHub(true)
+    setWorkspaceTab(next)
+    setShowDrawer(false)
+    setShowPlusSheet(false)
+    setShowFileMenu(false)
+    setShowCreateSkillSheet(false)
+    setSelectedSkillDetail(null)
+    setShowMySkillsPage(false)
+    setShowCustomAgentConversationPage(false)
+    setShowSkillSelectorPage(false)
+    setShowLibraryPage(false)
+    setShowAgentConfigPage(false)
+    setShowCreateAgentModal(false)
   }
 
-  const openDiscoverPage = () => {
-    closeNavigationOverlays()
-    setShowDiscoverPage(true)
-  }
+  const closeNavigationOverlays = () => navigateWorkspace('task')
 
   const handleNewChat = () => {
     const nextPath = resolveDrawerNewChatPath(location.pathname)
@@ -1231,7 +1196,7 @@ export default function AIPage({
   }, [loadCommandsData])
 
   useLayoutEffect(() => {
-    if (isDiscoverActive) return
+    if (isFeatureActive) return
 
     const saved = workspaceScrollRef.current
     workspaceScrollRef.current = null
@@ -1249,12 +1214,12 @@ export default function AIPage({
       })
     })
     return () => window.cancelAnimationFrame(frame)
-  }, [isDiscoverActive, routeSessionId])
+  }, [isFeatureActive, routeSessionId])
 
   useEffect(() => {
     const scroller = scrollerRef.current
 
-    if (isDiscoverActive || !scroller || !autoScrollEnabledRef.current) {
+    if (isFeatureActive || !scroller || !autoScrollEnabledRef.current) {
       return
     }
 
@@ -1262,7 +1227,7 @@ export default function AIPage({
       top: scroller.scrollHeight,
       behavior: 'smooth',
     })
-  }, [isDiscoverActive, messages])
+  }, [isFeatureActive, messages])
 
   useEffect(() => {
     const scroller = scrollerRef.current
@@ -1295,53 +1260,6 @@ export default function AIPage({
       autoScrollEnabledRef.current = true
     }
   }, [messages.length])
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedSkillSearchValue(skillSearchValue.trim())
-    }, 300)
-
-    return () => {
-      window.clearTimeout(timer)
-    }
-  }, [skillSearchValue])
-
-  useEffect(() => {
-    if (!showSkillsPage) {
-      return
-    }
-
-    const controller = new AbortController()
-
-    void (async () => {
-      setSkillsLoading(true)
-      setSkillsError('')
-
-      try {
-        const [nextOfficialSkills, nextCommunitySkills] = await Promise.all([
-          fetchOfficialSkills(controller.signal),
-          debouncedSkillSearchValue
-            ? searchClawhubSkills(debouncedSkillSearchValue, { signal: controller.signal })
-            : fetchClawhubSkills({ limit: 20, signal: controller.signal }),
-        ])
-
-        setOfficialSkills(nextOfficialSkills)
-        setCommunitySkills(nextCommunitySkills)
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setSkillsError(error instanceof Error ? error.message : '技能列表加载失败')
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setSkillsLoading(false)
-        }
-      }
-    })()
-
-    return () => {
-      controller.abort()
-    }
-  }, [debouncedSkillSearchValue, showSkillsPage])
 
   const handleRefreshFeatured = useCallback(() => {
     const totalGroups = Math.ceil(filteredOfficialSkills.length / SKILL_COMMUNITY_PAGE_SIZE)
@@ -1549,7 +1467,7 @@ export default function AIPage({
     setActiveToolType(resolvedSkillName || null)
     setSelectedSkillName(resolvedSkillName || null)
     setShowPlusSheet(false)
-    setShowSkillsPage(false)
+    setWorkspaceTab('task')
     setShowMySkillsPage(false)
     setShowSkillSelectorPage(false)
     setSelectedSkillDetail(null)
@@ -1606,8 +1524,7 @@ export default function AIPage({
       }
     })
 
-    setOfficialSkills(applySelection)
-    setCommunitySkills(applySelection)
+    setSkillSelected(resolvedSkillName, true)
     setAddedSkills(applySelection)
     setUserSkills(applySelection)
     setSelectedSkillDetail((current) => {
@@ -1684,6 +1601,7 @@ export default function AIPage({
         setCreatedSkills(await fetchCreatedSkills())
       } else {
         await removeAddedSkill(resolvedSkillName)
+        setSkillSelected(resolvedSkillName, false)
         setAddedSkills(await fetchAddedSkills())
       }
     } finally {
@@ -1917,6 +1835,7 @@ export default function AIPage({
 
   return showCommandsPage ? (
     <AiCommandsPage
+      workspaceScrollbars={!isPartnerRoute}
       activeTab={commandsPageTab}
       bestPractices={commandsData.best_practices}
       error={commandsError}
@@ -1928,7 +1847,7 @@ export default function AIPage({
       onTabChange={setCommandsPageTab}
     />
   ) : (
-    <div className={`ai-workspace-frame${showDrawer && !isPartnerRoute ? ' is-sidebar-open' : ''}`}>
+    <AiScrollScope enabled={!isPartnerRoute} className={`ai-workspace-frame${showDrawer && !isPartnerRoute ? ' is-sidebar-open' : ''}`}>
       {!isPartnerRoute && (
         <AiWorkspaceSidebar
           backgroundRef={pageRef}
@@ -1937,6 +1856,9 @@ export default function AIPage({
           onClose={() => setShowDrawer(false)}
         >
           <AiTaskSidebarContent
+            open={showDrawer}
+            onRemoveOne={removeSessionFromList}
+            onRefresh={refreshSessions}
             activeSessionId={routeSessionId}
             groups={groupedSessions}
             isLoading={isLoadingSessions}
@@ -1952,8 +1874,8 @@ export default function AIPage({
         </AiWorkspaceSidebar>
       )}
     <div className={`ai-page${isPartnerRoute ? '' : ' has-workspace-navigation'}`} ref={pageRef}>
-      {/* 保留对话节点，但切换到发现时不让它占用内容区。 */}
-      <div className="ai-workspace-content" hidden={isDiscoverActive}>
+      {/* 切换栏目仅隐藏任务内容和输入区，不卸载消息、草稿或中止回复。 */}
+      <div className="ai-workspace-content" hidden={isFeatureActive}>
         <div className="ai-page-header">
           <button
             aria-controls={isPartnerRoute ? undefined : sidebarId}
@@ -2029,36 +1951,26 @@ export default function AIPage({
         ) : null}
       </div>
 
-      {isDiscoverActive && (
+      {isFeatureActive && (
         <div className="ai-workspace-feature">
-          {showDiscoverHub && (
-            <AiDiscoverHub
-              onOpenDiscover={openDiscoverPage}
-              onOpenLibrary={openSidebarLibraryPage}
-              onOpenSkills={openSkillsPage}
-            />
-          )}
-
-          {/* 库 */}
-          {showSidebarLibrary && (
+          {workspaceTab === 'library' && (
             <AiSidebarLibraryPage
-              onBack={openDiscoverHub}
+              onBack={closeNavigationOverlays}
               onOpenSession={(sessionId) => {
-                setShowSidebarLibrary(false)
+                closeNavigationOverlays()
                 openSession(sessionId)
               }}
             />
           )}
 
-          {/* 原发现功能页 */}
-          {showDiscoverPage && (
+          {workspaceTab === 'agents' && (
             <AiDiscoverPage
               discoverLoading={discoverLoading}
               discoverError={discoverError}
               discoverSections={discoverSections}
               onOpenAgentChat={openAgentChat}
               onOpenCreateAgent={() => setShowCreateAgentModal(true)}
-              onBack={openDiscoverHub}
+              onBack={closeNavigationOverlays}
             />
           )}
 
@@ -2073,7 +1985,7 @@ export default function AIPage({
                 <div className="ai-skill-community-page">
                   {/* Header */}
                   <div className="ai-skill-community-header">
-                    <button aria-label="返回发现入口" className="ai-skill-community-menu" type="button" onClick={openDiscoverHub}>
+                    <button aria-label="返回任务" className="ai-skill-community-menu" type="button" onClick={closeNavigationOverlays}>
                       <LeftOutline aria-hidden="true" width={20} height={20} />
                     </button>
                     <div className="ai-skill-community-title">技能社区</div>
@@ -2089,18 +2001,12 @@ export default function AIPage({
                   </div>
 
                   <div className="ai-skill-community-content">
-                    <div className="ai-skill-community-search">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round">
-                        <circle cx="11" cy="11" r="7" />
-                        <line x1="20" y1="20" x2="16.65" y2="16.65" />
-                      </svg>
-                      <input
-                        className="ai-inline-search-input"
-                        placeholder="搜索技能名称、描述或标签"
-                        value={skillSearchValue}
-                        onChange={(event) => setSkillSearchValue(event.target.value)}
-                      />
-                    </div>
+                    <AiSearchField
+                      className="ai-skill-community-search"
+                      placeholder="搜索技能名称、描述或标签"
+                      value={skillSearchValue}
+                      onChange={setSkillSearchValue}
+                    />
 
                     <div className="ai-skill-community-section-header">
                       <div className="ai-skill-community-section-title">官方精选</div>
@@ -2116,10 +2022,10 @@ export default function AIPage({
                     </div>
 
                     <div className="ai-skill-community-featured-list">
-                      {skillsLoading ? <div className="ai-data-status">技能加载中…</div> : null}
-                      {!skillsLoading && skillsError ? <div className="ai-data-status">{skillsError}</div> : null}
-                      {!skillsLoading && !skillsError && featuredSkills.length === 0 ? <div className="ai-data-status">暂无精选技能</div> : null}
-                      {!skillsLoading && !skillsError && featuredSkills.map((skill) => (
+                      {official.loading ? <div className="ai-data-status">技能加载中…</div> : null}
+                      {official.error ? <div className="ai-data-status">{official.error}</div> : null}
+                      {!official.loading && !official.error && featuredSkills.length === 0 ? <div className="ai-data-status">暂无精选技能</div> : null}
+                      {featuredSkills.map((skill) => (
                         <button className="ai-skill-community-featured-item" key={skill.id} type="button" onClick={() => openOfficialSkillDetail(skill)}>
                           <AiNameAvatar
                             ariaLabel={`${skill.title}头像`}
@@ -2157,8 +2063,10 @@ export default function AIPage({
                         </button>
                       </div>
                       <div className="ai-skill-community-all-list">
-                        {!skillsLoading && !skillsError && filteredClawhubSkills.length === 0 ? <div className="ai-data-status">暂无 ClawHub 技能</div> : null}
-                        {!skillsLoading && !skillsError && visibleClawhubSkills.map((skill) => (
+                        {clawhub.loading ? <div className="ai-data-status">ClawHub 技能加载中…</div> : null}
+                        {clawhub.error ? <div className="ai-data-status">{clawhub.error}</div> : null}
+                        {!clawhub.loading && !clawhub.error && filteredClawhubSkills.length === 0 ? <div className="ai-data-status">暂无 ClawHub 技能</div> : null}
+                        {visibleClawhubSkills.map((skill) => (
                           <button className="ai-skill-community-all-item" key={skill.id} type="button" onClick={() => openClawhubSkillDetail(skill)}>
                             <AiNameAvatar
                               ariaLabel={`${skill.title}头像`}
@@ -2214,18 +2122,13 @@ export default function AIPage({
                 <div className="ai-my-skills-actions" />
               </div>
 
-              <div className="ai-my-skills-search">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round">
-                  <circle cx="11" cy="11" r="7" />
-                  <line x1="20" y1="20" x2="16.65" y2="16.65" />
-                </svg>
-                <input
-                  className="ai-inline-search-input"
-                  placeholder="搜索"
-                  value={mySkillSearchValue}
-                  onChange={(event) => setMySkillSearchValue(event.target.value)}
-                />
-              </div>
+              <AiSearchField
+                className="ai-my-skills-search"
+                label="搜索我的技能"
+                placeholder="搜索"
+                value={mySkillSearchValue}
+                onChange={setMySkillSearchValue}
+              />
 
               <div className={`ai-my-skills-list ${!mySkillsLoading && !mySkillsError && visibleManageSkills.length === 0 ? 'is-empty' : ''}`}>
                 {mySkillsLoading ? <div className="ai-data-status">我的技能加载中…</div> : null}
@@ -2247,7 +2150,7 @@ export default function AIPage({
         </div>
       )}
 
-      <div className="ai-page-bottom" hidden={isDiscoverActive}>
+      <div className="ai-page-bottom" hidden={isFeatureActive}>
         {requestError ? <div className="ai-page-error-banner">{requestError}</div> : null}
         {!requestError && localBannerMessage ? <div className="ai-page-notice-banner">{localBannerMessage}</div> : null}
         {draftAttachments.length > 0 && (
@@ -2295,7 +2198,9 @@ export default function AIPage({
         ) : (
           <AiWorkspaceComposer
             active={isAiMainPageVisible && !showSaveCommandModal && !showCurrentConversationCustomAgentDetailSheet}
-            canRecord={draftAttachments.every((attachment) => attachment.status === 'completed') && !showPlusSheet}
+            canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !showPlusSheet}
+            modelBusy={modelBusy}
+            modelControls={modelControls}
             canSubmit={canSend}
             isResponding={isResponding}
             isStopping={isStopping}
@@ -2329,11 +2234,7 @@ export default function AIPage({
 
       {!isPartnerRoute && (
         <footer className="ai-workspace-footer">
-          <AiWorkspaceNavigation
-            active={isDiscoverActive ? 'discover' : 'task'}
-            onTask={closeNavigationOverlays}
-            onDiscover={openDiscoverHub}
-          />
+          <AiWorkspaceNavigation active={workspaceTab} onNavigate={navigateWorkspace} />
         </footer>
       )}
 
@@ -2776,6 +2677,7 @@ export default function AIPage({
             ? () => setShowAgentConfigPage(false)
             : undefined}
           onDraftChange={setAgentConfigDraft}
+          onSkillInstalled={(name) => setSkillSelected(name, true)}
           onPublishSuccess={handleAgentPublishSuccess}
         />
       )}
@@ -2810,18 +2712,13 @@ export default function AIPage({
             <div className="ai-chat-skill-picker-header-spacer" />
           </div>
 
-          <div className="ai-chat-skill-picker-search">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round">
-              <circle cx="11" cy="11" r="7" />
-              <line x1="20" y1="20" x2="16.65" y2="16.65" />
-            </svg>
-            <input
-              className="ai-inline-search-input"
-              placeholder="搜索"
-              value={skillSelectorSearchValue}
-              onChange={(event) => setSkillSelectorSearchValue(event.target.value)}
-            />
-          </div>
+          <AiSearchField
+            className="ai-chat-skill-picker-search"
+            label="搜索可用技能"
+            placeholder="搜索"
+            value={skillSelectorSearchValue}
+            onChange={setSkillSelectorSearchValue}
+          />
 
           <div className="ai-chat-skill-picker-list">
             {userSkillsLoading ? <div className="ai-data-status">技能加载中…</div> : null}
@@ -2935,6 +2832,6 @@ export default function AIPage({
         ]}
       />
     </div>
-    </div>
+    </AiScrollScope>
   )
 }

@@ -12,6 +12,7 @@ import {
   type LibraryPageFileType,
 } from '../../../services/library'
 import AiLibraryFilePreview from './AiLibraryFilePreview'
+import { AiSearchField, AiSearchTrigger } from './AiSearchField'
 import './AiSidebarLibraryPage.css'
 
 type AiSidebarLibraryPageProps = {
@@ -34,15 +35,6 @@ const FILE_TYPE_FILTERS: Array<{ key: LibraryPageFileType; label: string }> = [
   { key: 'whiteboard', label: '白板' },
   { key: 'other', label: '其他' },
 ]
-
-function SearchIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="11" cy="11" r="7" />
-      <line x1="20" y1="20" x2="16.65" y2="16.65" />
-    </svg>
-  )
-}
 
 function MoreIcon() {
   return (
@@ -379,7 +371,7 @@ export function AiSidebarLibraryPage({
   return (
     <div className="ai-library-hub-page">
       <div className="ai-library-hub-header">
-        <button aria-label="返回发现入口" className="ai-library-hub-header-btn" type="button" onClick={onBack}>
+        <button aria-label="返回任务" className="ai-library-hub-header-btn" type="button" onClick={onBack}>
           <LeftOutline aria-hidden="true" width={20} height={20} />
         </button>
         <div className="ai-library-hub-title">库</div>
@@ -389,31 +381,23 @@ export function AiSidebarLibraryPage({
       <div className={`ai-library-hub-toolbar ${isSearchOpen ? 'is-searching' : ''}`} ref={toolbarRef}>
         <div className={`ai-library-hub-search-shell ${isSearchOpen ? 'is-open' : ''}`}>
           {isSearchOpen ? (
-            <label className="ai-library-hub-search">
-              <SearchIcon />
-              <input
-                autoFocus
-                placeholder="搜索库文件"
-                type="text"
-                value={keyword}
-                onChange={(event) => {
-                  setKeyword(event.target.value)
-                  setOpenFilterMenu(null)
-                }}
-              />
-            </label>
+            <AiSearchField
+              autoFocus
+              placeholder="搜索库文件"
+              value={keyword}
+              onChange={value => {
+                setKeyword(value)
+                setOpenFilterMenu(null)
+              }}
+            />
           ) : (
-            <button
-              aria-label="展开搜索"
-              className="ai-library-hub-search-trigger"
-              type="button"
+            <AiSearchTrigger
+              label="展开搜索"
               onClick={() => {
                 setIsSearchOpen(true)
                 setOpenFilterMenu(null)
               }}
-            >
-              <SearchIcon />
-            </button>
+            />
           )}
         </div>
 

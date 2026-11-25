@@ -1,5 +1,6 @@
 .ai-workspace-frame {
   --ai-sidebar-width: 82%;
+  --ai-workspace-background: #f5f6f8;
   position: relative;
   display: flex;
   flex: 1 1 0;
@@ -7,7 +8,7 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background: #f6f6f6;
+  background: var(--ai-workspace-background);
 }
 
 .ai-workspace-frame > .ai-page {
@@ -40,6 +41,7 @@
   min-height: 0;
   height: 100%;
   overflow: hidden;
+  /* 面板透出工作区底色，保留主页面平移时的交界阴影。 */
   background: transparent;
   pointer-events: auto;
 }
@@ -51,7 +53,7 @@
   padding: 0;
   border: 0;
   border-radius: 24px 0 0 24px;
-  background: rgb(246 246 246 / 58%);
+  background: color-mix(in srgb, var(--ai-workspace-background) 58%, transparent);
   cursor: pointer;
   pointer-events: auto;
   -webkit-tap-highlight-color: transparent;

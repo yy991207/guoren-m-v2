@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { AiSearchField } from './AiSearchField'
 
 type AiSelectionSheetItem = {
   id: string
@@ -68,22 +69,7 @@ export function AiSelectionSheet({
         </div>
 
         {showSearch ? (
-          <label className="ai-selection-sheet-search" htmlFor={`ai-selection-sheet-search-${title}`}>
-            <span className="ai-selection-sheet-search-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3.5-3.5" />
-              </svg>
-            </span>
-            <input
-              id={`ai-selection-sheet-search-${title}`}
-              className="ai-selection-sheet-search-input"
-              placeholder={searchPlaceholder}
-              type="search"
-              value={searchValue}
-              onChange={(event) => onSearchChange(event.target.value)}
-            />
-          </label>
+          <AiSearchField placeholder={searchPlaceholder} value={searchValue} onChange={onSearchChange} />
         ) : null}
 
         <div className={`ai-selection-sheet-body has-edge-scrollbar${children ? ' is-plain' : ''}`}>

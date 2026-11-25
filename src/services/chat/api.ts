@@ -131,6 +131,9 @@ export async function buildStartChatStreamRequest(
         enable_web_search: payload.enableWebSearch ?? false,
         include_tool_details: true,
         message: payload.message,
+        // 后端不继承上轮模型；Auto 与明确的模型编号在协议里是不同选择。
+        model: payload.model ?? 'auto',
+        thinking_level: payload.thinkingLevel ?? null,
         uploaded_files: payload.uploadedFiles ?? [],
         resource_ids: payload.resourceIds ?? [],
         ...(payload.skillName ? { skill_name: payload.skillName } : {}),

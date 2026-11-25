@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { AiSearchField } from './AiSearchField'
 
 import {
   ROOT_ORG_DEPART,
@@ -116,22 +117,7 @@ export function AiOrgMemberPicker({
   return (
     <div className="ai-org-member-picker" data-testid="ai-org-member-picker">
       <div className="ai-org-member-picker-toolbar">
-        <label className="ai-org-member-picker-search" htmlFor="ai-org-member-picker-search-input">
-          <span className="ai-org-member-picker-search-icon" aria-hidden="true">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="11" cy="11" r="7" />
-              <path d="M20 20l-3.5-3.5" />
-            </svg>
-          </span>
-          <input
-            id="ai-org-member-picker-search-input"
-            className="ai-org-member-picker-search-input"
-            placeholder="搜索部门或成员"
-            type="search"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-          />
-        </label>
+        <AiSearchField placeholder="搜索部门或成员" value={searchValue} onChange={setSearchValue} />
 
         <div className="ai-org-member-picker-breadcrumb" aria-label="成员目录路径">
           {contactBreadcrumb.map((item, index) => {

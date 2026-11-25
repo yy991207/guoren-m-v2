@@ -1,43 +1,42 @@
 .ai-workspace-navigation {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   padding-block-start: 6px;
 }
 
-/* 仅侧栏展开时让任务入口露在窄条内，正常底栏始终保持等宽两列。 */
-.ai-workspace-frame.is-sidebar-open .ai-workspace-navigation__button:first-child {
-  justify-self: start;
-  width: 44px;
-}
-
-.ai-workspace-navigation__button,
-.ai-discover-hub__entry {
+.ai-workspace-navigation__button {
   box-sizing: border-box;
   display: flex;
-  align-items: center;
-  min-width: 0;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  cursor: pointer;
-}
-
-.ai-workspace-navigation__button {
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: 3px;
+  min-width: 0;
   min-height: 48px;
-  padding: 4px 8px;
+  padding: 4px;
+  border: 0;
   border-radius: 10px;
+  background: transparent;
   color: #696969;
+  font: inherit;
   font-size: 12px;
   font-weight: 500;
   line-height: 1.25;
+  cursor: pointer;
 }
 
-.ai-workspace-navigation__button svg {
-  flex-shrink: 0;
+.ai-workspace-navigation__icon {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+}
+
+/* 侧栏展开时只露出一条主页面，保持任务图标可见，不改变四个入口的宽度。 */
+.ai-workspace-frame.is-sidebar-open .ai-workspace-navigation__button:first-child {
+  align-items: flex-start;
+  padding-inline-start: 10px;
 }
 
 .ai-workspace-navigation__button:active,
@@ -45,107 +44,15 @@
   color: #141414;
 }
 
-.ai-workspace-navigation__button[aria-current='page'] {
-  font-weight: 600;
+.ai-workspace-navigation__button[aria-current='page'] .ai-workspace-navigation__icon {
+  color: #000;
 }
 
-.ai-discover-hub__entry:active {
-  background: #e2e5e9;
+.ai-workspace-navigation__button[aria-current='page'] {
+  font-weight: 600;
 }
 
 .ai-workspace-navigation__button:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: -2px;
-}
-
-.ai-discover-hub__entry:focus-visible {
-  outline: 2px solid #4b5563;
-  outline-offset: -2px;
-}
-
-.ai-discover-hub {
-  --ai-discover-hub-max-width: 520px;
-
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-  background: #f5f6f8;
-  color: #1f2329;
-}
-
-.ai-discover-hub__header,
-.ai-discover-hub__content {
-  padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px));
-}
-
-.ai-discover-hub__header {
-  flex: 0 0 auto;
-  padding-block: calc(16px + env(safe-area-inset-top, 0px)) 12px;
-}
-
-.ai-discover-hub__title,
-.ai-discover-hub__list {
-  max-width: var(--ai-discover-hub-max-width);
-  margin: 0 auto;
-}
-
-.ai-discover-hub__title {
-  font-size: 22px;
-  font-weight: 700;
-  line-height: 1.4;
-}
-
-.ai-discover-hub__content {
-  /* 仅入口区滚动，内容区缩小时不挤占外层输入区和底栏。 */
-  box-sizing: border-box;
-  flex: 1 1 auto;
-  min-height: 0;
-  max-height: 100%;
-  padding-block: 4px 12px;
-  overflow-y: auto;
-  overscroll-behavior-y: contain;
-}
-
-.ai-discover-hub__list {
-  padding: 0;
-  list-style: none;
-  border: 1px solid #e8eaed;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #fff;
-}
-
-.ai-discover-hub__list > li + li {
-  border-top: 1px solid #eef0f2;
-}
-
-.ai-discover-hub__entry {
-  gap: 12px;
-  width: 100%;
-  min-height: 60px;
-  padding: 8px 14px;
-  color: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.4;
-  text-align: start;
-}
-
-.ai-discover-hub__icon {
-  display: grid;
-  flex-shrink: 0;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border-radius: 10px;
-  background: #f1f3f5;
-  color: #4b5563;
-}
-
-.ai-discover-hub__arrow {
-  flex-shrink: 0;
-  margin-inline-start: auto;
-  color: #737982;
 }

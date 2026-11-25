@@ -5,6 +5,8 @@ import type { TextAreaRef } from 'antd-mobile/es/components/text-area'
 import { AddOutline, DownOutline, StopOutline, UpOutline } from 'antd-mobile-icons'
 import { useVoiceInput } from '../../../hooks/useVoiceInput'
 import { AiWorkspaceModelSheet } from './AiWorkspaceModelSheet'
+import { levelLabels } from '../../../services/chat/models'
+import type { ChatModelControls } from '../hooks/useWorkspaceChatModels'
 import './AiWorkspaceComposer.css'
 
 const MAX_INPUT_LENGTH = 10_000
@@ -77,6 +79,8 @@ export interface AiWorkspaceComposerProps {
   active: boolean
   canRecord: boolean
   canSubmit: boolean
+  modelControls: ChatModelControls
+  modelBusy: boolean
   className?: string
   isResponding: boolean
   isStopping: boolean
@@ -345,6 +349,8 @@ export function AiWorkspaceComposer({
   active,
   canRecord,
   canSubmit,
+  modelControls,
+  modelBusy,
   className,
   isResponding,
   isStopping,
@@ -366,9 +372,12 @@ export function AiWorkspaceComposer({
   const composerRef = useRef<HTMLDivElement>(null)
   const fieldRef = useRef<TextAreaRef>(null)
   const focusTextRef = useRef(false)
-  const [showModelSheet, setShowModelSheet] = useState(false)
+  const [selector, setSelector] = useState<'model' | 'thinking' | null>(null)
   const expanded = !voiceMode && textExpanded
-  const modelSheetOpen = active && expanded && !plusExpanded && showModelSheet
+  const selectionLocked = !active || modelBusy || isResponding || isStopping
+  const modelSheetOpen = expanded && !plusExpanded && !selectionLocked && selector !== null
+    && (selector !== 'thinking' || modelControls.levels.length > 0)
+  const levelLabel = modelControls.thinkingLevel ? levelLabels[modelControls.thinkingLevel] : '选择档位'
   const canCapture = active && canRecord && voiceMode && !isResponding && !isStopping
   const { cancelCapture, capture, feedback, handleHoldBlur, handleLostPointerCapture, startCapture } = useComposerVoiceCapture({
     canCapture, onSubmit, sessionKey,
@@ -383,8 +392,8 @@ export function AiWorkspaceComposer({
 
   useLayoutEffect(() => {
     if (!active) onTextEditingChange(false)
-    if (showModelSheet && !modelSheetOpen) setShowModelSheet(false)
-  }, [active, modelSheetOpen, onTextEditingChange, showModelSheet])
+    if (selector && !modelSheetOpen) setSelector(null)
+  }, [active, modelSheetOpen, onTextEditingChange, selector])
 
   useEffect(() => {
     if (!active || !expanded || modelSheetOpen || plusExpanded) return
@@ -533,22 +542,22 @@ export function AiWorkspaceComposer({
           </button>
         )}
         {expanded && (
-          <button
-            aria-expanded={modelSheetOpen}
-            aria-haspopup="dialog"
-            aria-label="选择模型：Auto"
-            className="ai-workspace-composer-model"
-            disabled={!active}
-            type="button"
-            onClick={(event) => {
-              event.currentTarget.focus({ preventScroll: true })
-              setShowModelSheet(true)
-            }}
-          >
-            <span aria-hidden="true" className="ai-workspace-composer-model-icon">A</span>
-            Auto
-            <DownOutline aria-hidden="true" width={12} height={12} />
-          </button>
+          <div className="ai-workspace-composer-selectors">
+            <button aria-expanded={modelSheetOpen && selector === 'model'} aria-haspopup="dialog" aria-label={`选择模型：${modelControls.label}`}
+              className="ai-workspace-composer-model" disabled={selectionLocked} type="button"
+              onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setSelector('model') }}>
+              {!modelControls.model && <span aria-hidden="true" className="ai-workspace-composer-model-icon">A</span>}
+              <span className="ai-workspace-composer-model-name">{modelControls.label}</span>
+              <DownOutline aria-hidden="true" width={12} height={12} />
+            </button>
+            {modelControls.levels.length > 0 && (
+              <button aria-expanded={modelSheetOpen && selector === 'thinking'} aria-haspopup="dialog" aria-label={`思考强度：${levelLabel}`}
+                className="ai-workspace-composer-model ai-workspace-composer-level" disabled={selectionLocked} type="button"
+                onClick={(event) => { event.currentTarget.focus({ preventScroll: true }); setSelector('thinking') }}>
+                {levelLabel}<DownOutline aria-hidden="true" width={12} height={12} />
+              </button>
+            )}
+          </div>
         )}
         <button
           aria-expanded={plusExpanded}
@@ -577,7 +586,7 @@ export function AiWorkspaceComposer({
         )}
       </div>
       {note && <p className="ai-workspace-composer-note">{note}</p>}
-      {modelSheetOpen && <AiWorkspaceModelSheet onClose={() => setShowModelSheet(false)} />}
+      {modelSheetOpen && selector && <AiWorkspaceModelSheet mode={selector} controls={modelControls} onClose={() => setSelector(null)} />}
     </div>
   )
 }

@@ -5,6 +5,7 @@ import DisplayName from '../../../components/DisplayName'
 import { useDisplayNamePrefetch } from '../../IM/utils/displayNameHooks'
 import { AiNameAvatar, type AiNameAvatarTone } from './AiNameAvatar'
 import { AiDiscoverHeader } from './AiDiscoverHeader'
+import { AiSearchField } from './AiSearchField'
 
 type AiDiscoverPageProps = {
   discoverLoading: boolean
@@ -159,22 +160,7 @@ export function AiDiscoverPage({
 
       <div className="ai-discover-content">
         <div className="ai-discover-actions">
-          <label className="ai-discover-search" htmlFor="ai-discover-search-input">
-            <span className="ai-discover-search-icon" aria-hidden="true">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="7" />
-                <path d="M20 20l-3.5-3.5" />
-              </svg>
-            </span>
-            <input
-              id="ai-discover-search-input"
-              className="ai-discover-search-input"
-              placeholder="搜索智能体"
-              type="search"
-              value={searchValue}
-              onChange={(event) => setSearchValue(event.target.value)}
-            />
-          </label>
+          <AiSearchField className="ai-discover-search" placeholder="搜索智能体" value={searchValue} onChange={setSearchValue} />
 
           <button className="ai-discover-create-btn" type="button" onClick={onOpenCreateAgent}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">

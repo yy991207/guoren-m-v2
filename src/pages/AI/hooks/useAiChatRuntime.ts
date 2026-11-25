@@ -49,6 +49,7 @@ import type {
   ChatStreamSnapshot,
 } from '../../../services/chat/types'
 import { resolveSubmitSessionId } from './resolveSubmitSessionId'
+import { useWorkspaceChatModels } from './useWorkspaceChatModels'
 
 function buildTimestamp(): string {
   return new Date().toISOString()
@@ -188,6 +189,12 @@ export function useAiChatRuntime() {
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const routeSessionId = searchParams.get('sessionId')
+  const { controls: modelControls, restoreHistory, restorePreference } = useWorkspaceChatModels()
+  const { model, thinkingLevel } = modelControls
+  const [modelSessionId, setModelSessionId] = useState<string | null>(null)
+  const restoringModel = !!routeSessionId && modelSessionId !== routeSessionId
+  const [preparingPrompt, setPreparingPrompt] = useState(false)
+  const preparingPromptRef = useRef(false)
 
   const [sessions, setSessions] = useState<ChatSession[]>([])
   const [messages, setMessages] = useState<ChatMessage[]>([])
@@ -208,6 +215,7 @@ export function useAiChatRuntime() {
   const processedEntryIdRef = useRef<string | null>(null)
   const skipRestoreSessionIdRef = useRef<string | null>(null)
   const messagesRef = useRef<ChatMessage[]>(messages)
+  const sessionsVersion = useRef(0)
 
   useEffect(() => {
     messagesRef.current = messages
@@ -219,8 +227,8 @@ export function useAiChatRuntime() {
 
   const canSend = useMemo(() => {
     const hasPendingAttachment = draftAttachments.some((attachment) => attachment.status !== 'completed')
-    return Boolean(inputValue.trim()) && !isResponding && !isStopping && !hasPendingAttachment
-  }, [draftAttachments, inputValue, isResponding, isStopping])
+    return Boolean(inputValue.trim()) && !restoringModel && !preparingPrompt && !isResponding && !isStopping && !hasPendingAttachment
+  }, [draftAttachments, inputValue, isResponding, isStopping, preparingPrompt, restoringModel])
 
   const applyStreamSnapshot = useCallback((snapshot: ChatStreamSnapshot) => {
     if (snapshot.sessionId !== currentSessionIdRef.current) {
@@ -233,15 +241,19 @@ export function useAiChatRuntime() {
     setRequestError(snapshot.status === 'error' ? (snapshot.error ?? '请求失败，请稍后重试。') : '')
   }, [])
 
-  const refreshSessions = useCallback(async () => {
+  const refreshSessions = useCallback(async (signal?: AbortSignal) => {
+    const version = ++sessionsVersion.current
     setIsLoadingSessions(true)
 
     try {
-      setSessions(await fetchChatSessions())
+      const next = await fetchChatSessions(signal)
+      if (!signal?.aborted && version === sessionsVersion.current) setSessions(next)
+      return true
     } catch (error) {
-      console.warn('[ai-chat] 刷新会话列表失败：', error)
+      if (!signal?.aborted) console.warn('[ai-chat] 刷新会话列表失败：', error)
+      return false
     } finally {
-      setIsLoadingSessions(false)
+      if (version === sessionsVersion.current) setIsLoadingSessions(false)
     }
   }, [])
 
@@ -349,7 +361,7 @@ export function useAiChatRuntime() {
     }
   }, [applyStreamSnapshot, refreshSessions])
 
-  const restoreSession = useCallback(async (sessionId: string) => {
+  const restoreSession = useCallback(async (sessionId: string, detail: Promise<ChatSessionDetail>, signal: AbortSignal) => {
     const cachedSnapshot = loadChatStreamSnapshot(sessionId)
 
     if (cachedSnapshot) {
@@ -360,6 +372,7 @@ export function useAiChatRuntime() {
 
     if (bridge) {
       const workerSnapshot = await bridge.subscribe(sessionId)
+      if (signal.aborted) return
 
       if (workerSnapshot) {
         applyStreamSnapshot(workerSnapshot)
@@ -371,6 +384,7 @@ export function useAiChatRuntime() {
           sessionId,
           cachedSnapshot.lastEventSequence,
         )
+        if (signal.aborted) return
 
         bridge.resumeStream({
           sessionId,
@@ -388,7 +402,9 @@ export function useAiChatRuntime() {
       return
     }
 
-    const session = await getChatSession(sessionId)
+    const session = await detail
+    // 切换或删除当前会话后，旧详情不能再恢复消息。
+    if (signal.aborted || currentSessionIdRef.current !== sessionId) return
     const restoredAgentName = session.agent_info?.agent_name?.trim() || ''
 
     // 刷新后只剩 sessionId，需要从会话详情把自定义智能体上下文补回来，
@@ -428,6 +444,7 @@ export function useAiChatRuntime() {
 
     if (bridge) {
       const { streamRequest, stopRequest } = await buildResumeChatStreamRequest(sessionId, 0)
+      if (signal.aborted) return
       bridge.resumeStream({
         sessionId,
         streamRequest,
@@ -451,7 +468,7 @@ export function useAiChatRuntime() {
   ) => {
     const prompt = (promptOverride ?? inputValue).trim()
 
-    if (!prompt || isResponding || isStopping) {
+    if (!prompt || restoringModel || preparingPromptRef.current || isResponding || isStopping) {
       return
     }
 
@@ -466,6 +483,8 @@ export function useAiChatRuntime() {
     setRequestError('')
     setSelectedArtifact(null)
     setIsStopping(false)
+    preparingPromptRef.current = true
+    setPreparingPrompt(true)
 
     try {
       const resolvedToolType = nextToolType ?? activeToolType
@@ -480,6 +499,7 @@ export function useAiChatRuntime() {
 
       if (currentSessionIdRef.current !== sessionId) {
         skipRestoreSessionIdRef.current = sessionId
+        setModelSessionId(sessionId)
         setSearchParams({ sessionId })
       }
 
@@ -498,6 +518,8 @@ export function useAiChatRuntime() {
 
       setMessages(initialSnapshot.messages)
       setIsResponding(true)
+      preparingPromptRef.current = false
+      setPreparingPrompt(false)
       // 录音单独发送识别结果，不能清掉切到语音前留下的文字草稿。
       if (!submitOptions?.preserveInput) {
         setInputValue('')
@@ -505,17 +527,20 @@ export function useAiChatRuntime() {
       setDraftAttachments([])
       setActiveToolType(resolvedToolType ?? null)
 
-      const { streamRequest, stopRequest } = await buildStartChatStreamRequest(sessionId, {
+      // 一轮发送固定同一份选择，后台发送和页面直连都使用这份请求体。
+      const payload = {
+        model,
+        thinkingLevel,
         enableWebSearch: submitOptions?.enableWebSearch ?? false,
         message: prompt,
         skillName: resolvedToolType ?? undefined,
         uploadedFiles: attachmentPayload.uploadedFiles,
         resourceIds: attachmentPayload.resourceIds,
-      })
-
+      }
       const bridge = bridgeRef.current
 
       if (bridge) {
+        const { streamRequest, stopRequest } = await buildStartChatStreamRequest(sessionId, payload)
         persistChatStreamSnapshot(initialSnapshot)
         applyStreamSnapshot(initialSnapshot)
         bridge.startStream({
@@ -527,18 +552,14 @@ export function useAiChatRuntime() {
       } else {
         await consumeStreamOnMainThread(
           initialSnapshot,
-          (signal) => streamChatMessage(sessionId, {
-            enableWebSearch: submitOptions?.enableWebSearch ?? false,
-            message: prompt,
-            skillName: resolvedToolType ?? undefined,
-            uploadedFiles: attachmentPayload.uploadedFiles,
-            resourceIds: attachmentPayload.resourceIds,
-          }, signal),
+          (signal) => streamChatMessage(sessionId, payload, signal),
         )
       }
 
       await refreshSessions()
     } catch (error) {
+      preparingPromptRef.current = false
+      setPreparingPrompt(false)
       const errorMessage = error instanceof Error ? error.message : '发送失败，请稍后重试'
       setRequestError(errorMessage)
       setIsResponding(false)
@@ -553,6 +574,9 @@ export function useAiChatRuntime() {
     activeToolType,
     isResponding,
     isStopping,
+    restoringModel,
+    model,
+    thinkingLevel,
     refreshSessions,
     setSearchParams,
   ])
@@ -591,10 +615,13 @@ export function useAiChatRuntime() {
     setSearchParams({ sessionId })
   }, [setSearchParams])
 
-  const removeSession = useCallback(async (sessionId: string) => {
-    await deleteChatSession(sessionId)
-    await refreshSessions()
-
+  const removeSessionFromList = useCallback(async (sessionId: string, signal?: AbortSignal) => {
+    await deleteChatSession(sessionId, signal)
+    if (signal?.aborted) return
+    // 后端确认后才移除；在删除前发出的列表响应不能把这一行加回去。
+    ++sessionsVersion.current
+    setIsLoadingSessions(false)
+    setSessions((current) => current.filter((item) => item.session_id !== sessionId))
     if (currentSessionIdRef.current === sessionId) {
       currentSessionIdRef.current = null
       setSearchParams({})
@@ -602,7 +629,12 @@ export function useAiChatRuntime() {
       setRequestError('')
       clearChatStreamSnapshot(sessionId)
     }
-  }, [refreshSessions, setSearchParams])
+  }, [setSearchParams])
+
+  const removeSession = useCallback(async (sessionId: string) => {
+    await removeSessionFromList(sessionId)
+    await refreshSessions()
+  }, [removeSessionFromList, refreshSessions])
 
   const startNewChat = useCallback((options?: { keepAgent?: boolean }) => {
     currentSessionIdRef.current = null
@@ -664,6 +696,8 @@ export function useAiChatRuntime() {
 
   useEffect(() => {
     if (!routeSessionId) {
+      setModelSessionId(null)
+      restorePreference()
       setMessages([])
       setIsResponding(false)
       setIsStopping(false)
@@ -676,20 +710,21 @@ export function useAiChatRuntime() {
       return
     }
 
-    let cancelled = false
-
-    void (async () => {
-      try {
-        await restoreSession(routeSessionId)
-      } catch (error) {
-        if (!cancelled) {
-          setRequestError(error instanceof Error ? error.message : '恢复会话失败')
-        }
-      }
-    })()
+    setModelSessionId(null)
+    restoreHistory()
+    const controller = new AbortController()
+    const { signal } = controller
+    // 即使消息可从快照恢复，模型配置仍来自同一次会话详情查询。
+    const detail = getChatSession(routeSessionId, signal)
+    const settings = detail.then((session) => {
+      if (!signal.aborted && currentSessionIdRef.current === routeSessionId) restoreHistory(session.model, session.thinking_level)
+    }).finally(() => { if (!signal.aborted) setModelSessionId(routeSessionId) })
+    void Promise.all([restoreSession(routeSessionId, detail, signal), settings]).catch((error) => {
+      if (!signal.aborted) setRequestError(error instanceof Error ? error.message : '恢复会话失败')
+    })
 
     return () => {
-      cancelled = true
+      controller.abort()
       bridgeRef.current?.unsubscribe(routeSessionId)
 
       if (abortControllerRef.current) {
@@ -698,12 +733,12 @@ export function useAiChatRuntime() {
         abortControllerRef.current = null
       }
     }
-  }, [restoreSession, routeSessionId])
+  }, [restoreHistory, restorePreference, restoreSession, routeSessionId])
 
   useEffect(() => {
     const state = location.state as ChatEntryState | null
 
-    if (!state?.entryId || processedEntryIdRef.current === state.entryId) {
+    if (restoringModel || !state?.entryId || processedEntryIdRef.current === state.entryId) {
       return
     }
 
@@ -732,7 +767,7 @@ export function useAiChatRuntime() {
         state: null,
       },
     )
-  }, [location.search, location.state, navigate, submitPrompt])
+  }, [location.search, location.state, navigate, restoringModel, submitPrompt])
 
   const activeSessionTitle = useMemo(() => {
     const activeSession = sessions.find((session) => session.session_id === routeSessionId)
@@ -751,6 +786,8 @@ export function useAiChatRuntime() {
     isLoadingSessions,
     isResponding,
     isStopping,
+    modelControls,
+    modelBusy: restoringModel || preparingPrompt,
     messages,
     requestError,
     routeSessionId,
@@ -767,6 +804,7 @@ export function useAiChatRuntime() {
     refreshSessions,
     removeDraftAttachment,
     removeSession,
+    removeSessionFromList,
   }
 }
 

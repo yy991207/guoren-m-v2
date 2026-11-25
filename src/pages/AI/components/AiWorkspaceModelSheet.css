@@ -1,4 +1,6 @@
 .ai-workspace-model-sheet {
+  --ai-model-accent: #333;
+  --ai-model-track: #dedede;
   position: fixed;
   inset: auto 0 max(0px, calc(100dvh - var(--app-viewport-height, 100dvh)));
   width: min(100%, 430px);
@@ -64,38 +66,110 @@
   background: #efefef;
 }
 
-.ai-workspace-model-sheet__close:focus-visible {
-  outline: 2px solid #414b55;
+.ai-workspace-model-sheet :is(button, input):focus-visible {
+  outline: 2px solid var(--ai-model-accent);
   outline-offset: -3px;
 }
 
 .ai-workspace-model-sheet__option {
   min-height: 48px;
+  width: 100%;
   margin: 0;
+  padding: 8px 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
   font-size: 15px;
   line-height: 1.4;
 }
 
 .ai-workspace-model-sheet__label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: grid;
+  gap: 2px;
+  overflow-wrap: anywhere;
 }
+.ai-workspace-model-sheet__label strong { font-weight: 550; }
+.ai-workspace-model-sheet__label small, .ai-thinking-summary span, .ai-thinking-single { color: #626568; font-size: 13px; }
+.ai-workspace-model-sheet__option[aria-selected='true'] { color: var(--ai-model-accent); }
+.ai-model-load-error { padding: 10px 4px; font-size: 14px; }
+.ai-model-load-error button, .ai-thinking-options button { min-height: 40px; padding: 4px 9px; border: 0; border-radius: 9px; background: #f2f2f2; color: inherit; font: inherit; cursor: pointer; }
+.ai-model-load-error button { margin-inline-start: 8px; }
+.ai-thinking-control {
+  max-width: 360px;
+  margin-inline: auto;
+  padding: 6px 4px 12px;
+}
+.ai-thinking-summary { display: grid; justify-items: center; gap: 3px; text-align: center; }
+.ai-thinking-summary strong { color: var(--ai-model-accent); font-size: 16px; line-height: 1.4; }
+.ai-thinking-summary span { max-width: 100%; overflow-wrap: anywhere; line-height: 1.4; }
 
-.ai-workspace-model-sheet__label svg {
-  flex: none;
+.ai-thinking-scale {
+  --rail-height: 22px;
+  /* 每档占一等宽列。两端预留半列减去端帽半径，使圆点、文字和原生滑杆停靠点共线。 */
+  --rail-inset: calc(50% / var(--level-count) - var(--rail-height) / 2);
+  margin-top: 4px;
 }
+.ai-thinking-scale[data-single='true'] { --rail-inset: 0px; max-width: 240px; margin-inline: auto; }
+.ai-thinking-axis { position: relative; display: grid; align-items: center; height: 56px; }
+.ai-thinking-rail {
+  position: absolute;
+  inset-inline: var(--rail-inset);
+  top: 50%;
+  transform: translateY(-50%);
+  height: var(--rail-height);
+  border-radius: 999px;
+  background: var(--ai-model-track);
+  pointer-events: none;
+}
+.ai-thinking-rail[data-has-value='true']::before {
+  content: '';
+  display: block;
+  height: 100%;
+  width: calc(var(--rail-height) + (100% - var(--rail-height)) * var(--fill-ratio));
+  border-radius: inherit;
+  background: var(--ai-model-accent);
+}
+.ai-thinking-marks, .ai-thinking-options { display: grid; grid-template-columns: repeat(var(--level-count), minmax(0, 1fr)); }
+.ai-thinking-marks { position: relative; place-items: center; pointer-events: none; }
+.ai-thinking-marks > span { width: 5px; height: 5px; border-radius: 50%; background: #929292; }
+.ai-thinking-marks > [data-reached='true'] { background: #bbb; }
+.ai-thinking-marks > [data-current='true'] { width: 12px; height: 12px; background: #fff; }
+.ai-thinking-scale[data-single='true'] .ai-thinking-marks > span { width: 5px; height: 5px; }
+
+/* 保留原生的拖动、键盘和读屏语义，视觉刻度不拦截手势。 */
+.ai-thinking-slider {
+  position: absolute;
+  z-index: 1;
+  inset-block: 0;
+  inset-inline-start: var(--rail-inset);
+  width: calc(100% - 2 * var(--rail-inset));
+  height: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  opacity: 0;
+  touch-action: none;
+  cursor: pointer;
+}
+.ai-thinking-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--rail-height);
+  height: var(--rail-height);
+}
+.ai-thinking-slider::-moz-range-thumb { width: var(--rail-height); height: var(--rail-height); border: 0; }
+.ai-thinking-slider:focus-visible + .ai-thinking-rail { outline: 2px solid var(--ai-model-accent); outline-offset: 3px; }
+.ai-thinking-options button { min-width: 0; min-height: 44px; padding: 0; background: transparent; font-size: 14px; }
+.ai-thinking-options button span { display: inline-block; padding: 3px 6px; border-radius: 6px; }
+.ai-thinking-options button[data-current='true'] span { background: #eee; color: var(--ai-model-accent); font-weight: 600; }
+.ai-thinking-single { margin: 0; text-align: center; }
 
 .ai-workspace-model-sheet__check {
   justify-self: center;
-  color: #218368;
-}
-
-.ai-workspace-model-sheet__visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
+  color: var(--ai-model-accent);
 }
