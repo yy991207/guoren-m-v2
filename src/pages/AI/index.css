@@ -76,8 +76,8 @@
   background: #fff;
 }
 
-/* 单独关闭按钮保留白色底板，透明边框保持原尺寸和位置。 */
-.ai-page.has-workspace-navigation .ai-page-header-right:has(> .ai-page-close:only-child) {
+/* 工作区顶部操作组保留白色底板，透明边框保持原尺寸和位置。 */
+.ai-page.has-workspace-navigation .ai-page-header-right {
   border-color: transparent;
 }
 

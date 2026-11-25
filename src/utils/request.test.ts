@@ -4,6 +4,8 @@ import { buildHmacAuthHeaders } from './hmacSign';
 vi.mock('./hmacSign', () => ({ buildHmacAuthHeaders: vi.fn(async () => ({})) }));
 
 const upstream = 'https://api.example.test';
+const ossSignPath = '/jeecg-boot/open/aliyun/oss/v1/temp/url';
+const ossSignUrl = `https://sign.example.test${ossSignPath}`;
 let request: typeof import('./request');
 
 beforeEach(async () => {
@@ -12,6 +14,7 @@ beforeEach(async () => {
   vi.stubEnv('VITE_API_BASE_URL', `${upstream}/jeecg-boot`);
   vi.stubEnv('VITE_AI_API_BASE_URL', upstream);
   vi.stubEnv('VITE_IM_MESSAGING_BASE_URL', `${upstream}/api/v1/messaging`);
+  vi.stubEnv('VITE_OSS_SIGN_URL', ossSignUrl);
   request = await import('./request');
 });
 
@@ -62,10 +65,28 @@ describe('本地接口转发', () => {
     expect(fetchMock).toHaveBeenNthCalledWith(2, `${location.origin}/__ai_proxy/api/v1/commands?user_id=123`, expect.anything());
   });
 
+  it('开发环境单独转发 AI 附件签名，不改主后端同路径的请求和对象存储直传', async () => {
+    vi.stubEnv('LOCAL_API_PROXY', 'true');
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await request.authorizedFetch(ossSignUrl, { method: 'POST' });
+
+    expect(buildHmacAuthHeaders).toHaveBeenCalledWith(ossSignUrl, 'POST');
+    expect(fetchMock).toHaveBeenCalledWith(`${location.origin}/__oss_sign_proxy${ossSignPath}`, expect.anything());
+    expect(request.resolveBrowserFetchUrl(`${upstream}${ossSignPath}`)).toBe(`${location.origin}/__app_proxy${ossSignPath}`);
+    const objectUrl = 'https://bucket.example.test/agent_input/sample.png?fixture=1';
+    expect(request.resolveBrowserFetchUrl(objectUrl)).toBe(objectUrl);
+
+    vi.stubEnv('VITE_OSS_SIGN_URL', `${upstream}${ossSignPath}`);
+    expect(request.resolveBrowserFetchUrl(`${upstream}${ossSignPath}`)).toBe(`${location.origin}/__app_proxy${ossSignPath}`);
+  });
+
   it('未启用时维持原有直连', () => {
     vi.stubEnv('LOCAL_API_PROXY', 'false');
     const path = '/api/v1/chat/sessions';
     expect(request.buildAiBrowserUrl(path)).toBe(`${upstream}${path}`);
     expect(request.resolveBrowserFetchUrl(`${upstream}/jeecg-boot/sys/login`)).toBe(`${upstream}/jeecg-boot/sys/login`);
+    expect(request.resolveBrowserFetchUrl(ossSignUrl)).toBe(ossSignUrl);
   });
 });

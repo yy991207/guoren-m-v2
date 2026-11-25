@@ -1,13 +1,14 @@
-import { authorizedFetch, buildAiApiUrl, buildApiUrl } from '../../utils/request'
+import { authorizedFetch, buildAiApiUrl } from '../../utils/request'
 import { getChatUserId } from './api'
 import { resolveChatParseTaskState } from './parseTaskState'
 import type { ChatAttachment } from './types'
 
-const OSS_SIGN_PATH = '/open/aliyun/oss/v1/temp/url'
+const OSS_SIGN_URL = import.meta.env.VITE_OSS_SIGN_URL
+const OSS_BUCKET_NAME = import.meta.env.VITE_OSS_BUCKET_NAME
+// 与桌面端保持一致，签名和实际上传必须使用相同的文件类型头。
+const OSS_UPLOAD_CONTENT_TYPE = 'text/plain'
 const CHAT_FILE_UPLOAD_PATH = '/api/v1/agent/files/upload'
 const PARSE_TASK_PATH = '/api/v1/parse'
-const DEFAULT_UPLOAD_BUCKET = import.meta.env.VITE_OSS_BUCKET_OTHER || 'guoren-files-hb-test'
-const DEFAULT_CONTENT_TYPE = 'application/octet-stream'
 const DEFAULT_POLL_INTERVAL_MS = 1500
 const DEFAULT_MAX_POLL_ATTEMPTS = 120
 
@@ -101,19 +102,23 @@ export function createPendingChatAttachment(file: File): ChatAttachment {
   }
 }
 
-async function requestUploadSignedUrl(file: File, objectKey: string, signal?: AbortSignal): Promise<string> {
-  const response = await authorizedFetch(buildApiUrl(OSS_SIGN_PATH), {
+async function requestUploadSignedUrl(objectKey: string, signal?: AbortSignal): Promise<string> {
+  if (!OSS_SIGN_URL || !OSS_BUCKET_NAME) {
+    throw new Error('缺少 AI 附件上传配置')
+  }
+
+  const response = await authorizedFetch(OSS_SIGN_URL, {
     method: 'POST',
     headers: {
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      bucketName: DEFAULT_UPLOAD_BUCKET,
+      bucketName: OSS_BUCKET_NAME,
       objectKey,
       method: 'PUT',
       headers: {
-        'Content-Type': file.type || DEFAULT_CONTENT_TYPE,
+        'Content-Type': OSS_UPLOAD_CONTENT_TYPE,
       },
     }),
     signal,
@@ -147,7 +152,7 @@ async function putFileToOss(
     const xhr = new XMLHttpRequest()
 
     xhr.open('PUT', signedUrl)
-    xhr.setRequestHeader('Content-Type', file.type || DEFAULT_CONTENT_TYPE)
+    xhr.setRequestHeader('Content-Type', OSS_UPLOAD_CONTENT_TYPE)
 
     xhr.upload.onprogress = (event) => {
       if (!event.lengthComputable) {
@@ -270,7 +275,7 @@ export async function uploadPendingChatFile(
   file: File,
   options: UploadChatFileOptions = {},
 ): Promise<ChatAttachment> {
-  const signedUrl = await requestUploadSignedUrl(file, pendingAttachment.objectKey ?? buildObjectKey(file), options.signal)
+  const signedUrl = await requestUploadSignedUrl(pendingAttachment.objectKey ?? buildObjectKey(file), options.signal)
 
   await putFileToOss(file, signedUrl, options.onProgress, options.signal)
 
