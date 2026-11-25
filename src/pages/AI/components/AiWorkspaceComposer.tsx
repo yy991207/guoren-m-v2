@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useEffect, useId, useImperativeHandle, useLayoutEffect, useRef, useState } from 'react'
-import type { KeyboardEvent, PointerEvent } from 'react'
+import type { KeyboardEvent, PointerEvent, ReactNode } from 'react'
 import { TextArea, Toast } from 'antd-mobile'
 import type { TextAreaRef } from 'antd-mobile/es/components/text-area'
 import { AddOutline, DownOutline, StopOutline, UpOutline } from 'antd-mobile-icons'
@@ -77,6 +77,7 @@ function isHoldKey(key: string): key is HoldKey {
 
 export interface AiWorkspaceComposerProps {
   active: boolean
+  attachmentTray?: ReactNode
   canRecord: boolean
   canSubmit: boolean
   modelControls: ChatModelControls
@@ -347,6 +348,7 @@ const FEEDBACK_LABELS = {
 
 export function AiWorkspaceComposer({
   active,
+  attachmentTray,
   canRecord,
   canSubmit,
   modelControls,
@@ -494,7 +496,8 @@ export function AiWorkspaceComposer({
           </div>
         </>
       )}
-      <div className="ai-workspace-composer-row" data-expanded={expanded} data-stage={feedback}>
+      <div className="ai-workspace-composer-row" data-expanded={expanded} data-has-attachments={Boolean(attachmentTray)} data-stage={feedback}>
+        {attachmentTray && <div className="ai-workspace-composer-attachments">{attachmentTray}</div>}
         {!voiceMode && (
           <div className="ai-workspace-composer-field">
             <label className="ai-workspace-composer-visually-hidden" htmlFor={fieldId}>提问输入框</label>

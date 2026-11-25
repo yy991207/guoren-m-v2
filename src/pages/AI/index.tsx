@@ -66,6 +66,7 @@ import AiLibraryFilePreview from './components/AiLibraryFilePreview'
 import { AiManageSkillCard } from './components/AiManageSkillCard'
 import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
+import { AiDraftAttachments } from './components/AiDraftAttachments'
 import { AiScrollScope } from './components/scrollbars/AiScrollScope'
 import { AiSearchField } from './components/AiSearchField'
 import { AiBottomSheet } from './components/AiBottomSheet'
@@ -422,6 +423,7 @@ export default function AIPage({
   const [libraryError, setLibraryError] = useState('')
   const [localBannerMessage, setLocalBannerMessage] = useState('')
   const [filePickerMode, setFilePickerMode] = useState<'all' | 'image'>('all')
+  const [draftImageFiles, setDraftImageFiles] = useState<ReadonlyMap<string, File>>(() => new Map())
   const [showPartnerSettings, setShowPartnerSettings] = useState(false)
   const [partnerConfig, setPartnerConfig] = useState<PartnerConfig | null>(null)
   const [partnerDraft, setPartnerDraft] = useState<PartnerConfig | null>(null)
@@ -498,6 +500,15 @@ export default function AIPage({
 
     return () => window.clearTimeout(timer)
   }, [localBannerMessage])
+
+  useEffect(() => {
+    // 本地图片只用于待发送缩略图；发送、删除或清空会话后不再保留文件引用。
+    const draftIds = new Set(draftAttachments.map(attachment => attachment.id))
+    setDraftImageFiles(current => {
+      const remaining = [...current].filter(([id]) => draftIds.has(id))
+      return remaining.length === current.size ? current : new Map(remaining)
+    })
+  }, [draftAttachments])
 
   const hasConversation = messages.length > 0 || Boolean(routeSessionId)
   const textComposerExpanded = !isPartnerRoute && !voiceMode && (textEditing || Boolean(inputValue.trim()))
@@ -884,6 +895,9 @@ export default function AIPage({
       const controller = new AbortController()
 
       uploadAbortControllersRef.current.set(pendingAttachment.id, controller)
+      if (!isPartnerRoute && /\.(?:png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name)) {
+        setDraftImageFiles(current => new Map(current).set(pendingAttachment.id, file))
+      }
       setDraftAttachments((current) => [...current, pendingAttachment])
 
       try {
@@ -2154,7 +2168,7 @@ export default function AIPage({
       <div className="ai-page-bottom" hidden={isFeatureActive}>
         {requestError ? <div className="ai-page-error-banner">{requestError}</div> : null}
         {!requestError && localBannerMessage ? <div className="ai-page-notice-banner">{localBannerMessage}</div> : null}
-        {draftAttachments.length > 0 && (
+        {isPartnerRoute && draftAttachments.length > 0 && (
           <div className="ai-page-draft-attachments">
             {draftAttachments.map((attachment) => (
               <div className="ai-page-draft-chip" key={attachment.id}>
@@ -2199,6 +2213,9 @@ export default function AIPage({
         ) : (
           <AiWorkspaceComposer
             active={isAiMainPageVisible && !showSaveCommandModal && !showCurrentConversationCustomAgentDetailSheet}
+            attachmentTray={draftAttachments.length > 0 ? (
+              <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles} onRemove={handleRemoveDraftAttachment} />
+            ) : undefined}
             canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !showPlusSheet}
             modelBusy={modelBusy}
             modelControls={modelControls}

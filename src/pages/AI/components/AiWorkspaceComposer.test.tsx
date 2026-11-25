@@ -131,6 +131,18 @@ function beginRecording(pointerId = 1) {
 }
 
 describe('AI 工作区对话输入', () => {
+  it('附件放在白色输入区内部，清空附件不再留下附件行', () => {
+    const { update } = renderComposer({ attachmentTray: <div>待发送附件</div> })
+    const textbox = screen.getByRole('textbox', { name: '提问输入框' })
+    const row = textbox.closest('.ai-workspace-composer-row')
+    expect(row).toContainElement(screen.getByText('待发送附件'))
+    expect(row).toHaveAttribute('data-has-attachments', 'true')
+
+    update({ attachmentTray: undefined })
+    expect(row).toHaveAttribute('data-has-attachments', 'false')
+    expect(screen.queryByText('待发送附件')).not.toBeInTheDocument()
+  })
+
   it('空输入从单行展开，点外面后收起同一个输入框', () => {
     const { props } = renderComposer({ canSubmit: false, value: '' })
     const textbox = screen.getByRole('textbox', { name: '提问输入框' })
