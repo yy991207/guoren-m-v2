@@ -13,6 +13,7 @@ import {
 } from '../../../services/library'
 import AiLibraryFilePreview from './AiLibraryFilePreview'
 import { AiBottomSheet } from './AiBottomSheet'
+import { AiFilterDropdown } from './AiFilterDropdown'
 import { AiSearchField, AiSearchTrigger } from './AiSearchField'
 import './AiSidebarLibraryPage.css'
 
@@ -152,11 +153,11 @@ export function AiSidebarLibraryPage({
   }, [keyword])
 
   useEffect(() => {
-    if (!isSearchOpen && !openFilterMenu) {
+    if (!isSearchOpen) {
       return
     }
 
-    // 搜索框或筛选菜单展开后，点工具栏外部的空白区域都统一收起，避免顶部浮层残留。
+    // 搜索框仍在点工具栏外部时收起；筛选菜单由 Ant Design Mobile 处理外部点击。
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target
 
@@ -169,7 +170,6 @@ export function AiSidebarLibraryPage({
       }
 
       setIsSearchOpen(false)
-      setOpenFilterMenu(null)
     }
 
     document.addEventListener('pointerdown', handlePointerDown)
@@ -177,7 +177,7 @@ export function AiSidebarLibraryPage({
     return () => {
       document.removeEventListener('pointerdown', handlePointerDown)
     }
-  }, [isSearchOpen, openFilterMenu])
+  }, [isSearchOpen])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -287,6 +287,11 @@ export function AiSidebarLibraryPage({
     return nextSpaces[0]?.id?.trim() || ''
   }
 
+  const changeFilterVisibility = (menu: FilterMenuKey, visible: boolean) => {
+    // 切到另一项时，旧菜单的外部关闭事件不能把新菜单一起关掉。
+    setOpenFilterMenu(current => visible ? menu : current === menu ? null : current)
+  }
+
   const closeActionSheet = () => {
     if (actionLoadingKey) {
       return
@@ -386,10 +391,7 @@ export function AiSidebarLibraryPage({
               autoFocus
               placeholder="搜索库文件"
               value={keyword}
-              onChange={value => {
-                setKeyword(value)
-                setOpenFilterMenu(null)
-              }}
+              onChange={setKeyword}
             />
           ) : (
             <AiSearchTrigger
@@ -403,82 +405,24 @@ export function AiSidebarLibraryPage({
         </div>
 
         {!isSearchOpen ? (
-          <div className="ai-library-hub-select-region">
           <div className="ai-library-hub-select-row">
-            <div className={`ai-library-hub-select-cell ai-library-hub-select-cell-source ${openFilterMenu === 'source' ? 'is-open' : ''}`}>
-              <button
-                aria-expanded={openFilterMenu === 'source'}
-                className={`ai-library-hub-select ${openFilterMenu === 'source' ? 'is-open' : ''}`}
-                type="button"
-                onClick={() => setOpenFilterMenu('source')}
-              >
-                <span className="ai-library-hub-select-label">来源</span>
-                <span className="ai-library-hub-select-value">{sourceFilter === 'all' ? '全部来源' : sourceFilter}</span>
-              </button>
-
-              {openFilterMenu === 'source' ? (
-                <div className="ai-library-hub-select-menu">
-                  <div className="ai-library-hub-select-menu-title">选择来源</div>
-                  <div className="ai-library-hub-select-menu-list">
-                    {sourceMenuOptions.map((option) => {
-                      const selected = sourceFilter === option.value
-
-                      return (
-                        <button
-                          className={`ai-library-hub-select-option ${selected ? 'is-active' : ''}`}
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setSourceFilter(option.value)
-                            setOpenFilterMenu(null)
-                          }}
-                        >
-                          <span>{option.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-
-            <div className={`ai-library-hub-select-cell ai-library-hub-select-cell-type ${openFilterMenu === 'type' ? 'is-open' : ''}`}>
-              <button
-                aria-expanded={openFilterMenu === 'type'}
-                className={`ai-library-hub-select ${openFilterMenu === 'type' ? 'is-open' : ''}`}
-                type="button"
-                onClick={() => setOpenFilterMenu('type')}
-              >
-                <span className="ai-library-hub-select-label">类型</span>
-                <span className="ai-library-hub-select-value">{typeMenuOptions.find((option) => option.value === fileTypeFilter)?.label ?? '全部'}</span>
-              </button>
-
-              {openFilterMenu === 'type' ? (
-                <div className="ai-library-hub-select-menu">
-                  <div className="ai-library-hub-select-menu-title">选择类型</div>
-                  <div className="ai-library-hub-select-menu-list">
-                    {typeMenuOptions.map((option) => {
-                      const selected = fileTypeFilter === option.value
-
-                      return (
-                        <button
-                          className={`ai-library-hub-select-option ${selected ? 'is-active' : ''}`}
-                          key={option.value}
-                          type="button"
-                          onClick={() => {
-                            setFileTypeFilter(option.value as LibraryPageFileType)
-                            setOpenFilterMenu(null)
-                          }}
-                        >
-                          <span>{option.label}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          </div>
+            <AiFilterDropdown
+              label="来源"
+              options={sourceMenuOptions}
+              value={sourceFilter}
+              visible={openFilterMenu === 'source'}
+              onChange={setSourceFilter}
+              onVisibleChange={visible => changeFilterVisibility('source', visible)}
+            />
+            <AiFilterDropdown<LibraryPageFileType>
+              label="类型"
+              options={typeMenuOptions}
+              placement="bottom-end"
+              value={fileTypeFilter}
+              visible={openFilterMenu === 'type'}
+              onChange={setFileTypeFilter}
+              onVisibleChange={visible => changeFilterVisibility('type', visible)}
+            />
           </div>
         ) : null}
       </div>
