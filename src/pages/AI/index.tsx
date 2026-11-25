@@ -68,6 +68,7 @@ import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
 import { AiScrollScope } from './components/scrollbars/AiScrollScope'
 import { AiSearchField } from './components/AiSearchField'
+import { AiBottomSheet } from './components/AiBottomSheet'
 import { AiWorkspaceNavigation, type AiWorkspaceTab } from './components/AiWorkspaceNavigation'
 import { AiWorkspacePlusSheet } from './components/AiWorkspacePlusSheet'
 import { AiWorkspaceWelcome } from './components/AiWorkspaceWelcome'
@@ -2240,22 +2241,19 @@ export default function AIPage({
 
       {/* 创建技能底部弹层 */}
       {showSkillsPage && showCreateSkillSheet && (
-        <div className="ai-skill-create-sheet-overlay" onClick={() => setShowCreateSkillSheet(false)}>
-          <div className="ai-skill-create-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="ai-skill-create-sheet-handle" />
-            <div className="ai-skill-create-sheet-icon">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M14.5 4.5a3 3 0 0 1 4.24 4.24l-1.42 1.42-4.24-4.24z" />
-                <path d="M13.09 5.91 5.3 13.7a2 2 0 0 0 0 2.83l2.17 2.17a2 2 0 0 0 2.83 0l7.79-7.79" />
-                <path d="m8.5 11.5 4 4" />
-              </svg>
-            </div>
-            <div className="ai-skill-create-sheet-title">使用对话创建</div>
-            <div className="ai-skill-create-sheet-desc">通过对话构建个人使用的技能</div>
-            <button className="ai-skill-create-sheet-btn" type="button" onClick={handleCreateSkillByChat}>去创建</button>
-            <div className="ai-skill-create-sheet-tip">如需上传本地文件，请前往电脑端操作</div>
+        <AiBottomSheet className="ai-skill-create-sheet" label="使用对话创建技能" onClose={() => setShowCreateSkillSheet(false)}>
+          <div className="ai-skill-create-sheet-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14.5 4.5a3 3 0 0 1 4.24 4.24l-1.42 1.42-4.24-4.24z" />
+              <path d="M13.09 5.91 5.3 13.7a2 2 0 0 0 0 2.83l2.17 2.17a2 2 0 0 0 2.83 0l7.79-7.79" />
+              <path d="m8.5 11.5 4 4" />
+            </svg>
           </div>
-        </div>
+          <div className="ai-skill-create-sheet-title">使用对话创建</div>
+          <div className="ai-skill-create-sheet-desc">通过对话构建个人使用的技能</div>
+          <button className="ai-skill-create-sheet-btn" type="button" onClick={handleCreateSkillByChat}>去创建</button>
+          <div className="ai-skill-create-sheet-tip">如需上传本地文件，请前往电脑端操作</div>
+        </AiBottomSheet>
       )}
 
       {showCurrentConversationCustomAgentDetailSheet && currentConversationCustomAgentId ? (
@@ -2276,86 +2274,83 @@ export default function AIPage({
       ) : null}
 
       {showPartnerSettings && (
-        <div className="ai-partner-settings-overlay" onClick={closePartnerSettings}>
-          <div className="ai-partner-settings-sheet" onClick={(event) => event.stopPropagation()}>
-            <div className="ai-partner-settings-handle" />
-            <div className="ai-partner-settings-head">
-              <div aria-hidden="true" className="ai-partner-settings-head-spacer" />
-              <div className="ai-partner-settings-head-title">基础信息</div>
-              <button className="ai-partner-settings-close" disabled={partnerSaving || partnerAvatarUploading} type="button" onClick={closePartnerSettings}>
-                关闭
+        <AiBottomSheet className="ai-partner-settings-sheet" label="伙伴基础信息" onClose={closePartnerSettings}>
+          <div className="ai-partner-settings-head">
+            <div aria-hidden="true" className="ai-partner-settings-head-spacer" />
+            <div className="ai-partner-settings-head-title">基础信息</div>
+            <button className="ai-partner-settings-close" disabled={partnerSaving || partnerAvatarUploading} type="button" onClick={closePartnerSettings}>
+              关闭
+            </button>
+          </div>
+
+          {partnerLoading ? <div className="ai-partner-settings-status">配置加载中...</div> : null}
+          {partnerError ? <div className="ai-partner-settings-status is-error">{partnerError}</div> : null}
+
+          <div className="ai-partner-settings-body">
+            <div className="ai-partner-settings-avatar-card">
+              <AiNameAvatar
+                ariaLabel={`${partnerDraft?.agentName || builtInAgent.name}头像`}
+                avatarUrl={partnerDraft?.avatarUrl}
+                className="ai-partner-settings-avatar-preview"
+                imageClassName="ai-partner-settings-avatar-preview-image"
+                name={partnerDraft?.agentName || builtInAgent.name || '建'}
+                tone="white"
+              />
+              <div className="ai-partner-settings-avatar-meta">
+                <div className="ai-partner-settings-avatar-title">伙伴头像</div>
+                <div className="ai-partner-settings-avatar-desc">支持直接上传图片，保存后会同步更新伙伴头像。</div>
+              </div>
+              <button
+                className="ai-partner-settings-upload-btn"
+                disabled={partnerSaving || partnerAvatarUploading}
+                type="button"
+                onClick={() => partnerAvatarInputRef.current?.click()}
+              >
+                {partnerAvatarUploading ? '上传中...' : '上传头像'}
               </button>
             </div>
-
-            {partnerLoading ? <div className="ai-partner-settings-status">配置加载中...</div> : null}
-            {partnerError ? <div className="ai-partner-settings-status is-error">{partnerError}</div> : null}
-
-            <div className="ai-partner-settings-body">
-              <div className="ai-partner-settings-avatar-card">
-                <AiNameAvatar
-                  ariaLabel={`${partnerDraft?.agentName || builtInAgent.name}头像`}
-                  avatarUrl={partnerDraft?.avatarUrl}
-                  className="ai-partner-settings-avatar-preview"
-                  imageClassName="ai-partner-settings-avatar-preview-image"
-                  name={partnerDraft?.agentName || builtInAgent.name || '建'}
-                  tone="white"
-                />
-                <div className="ai-partner-settings-avatar-meta">
-                  <div className="ai-partner-settings-avatar-title">伙伴头像</div>
-                  <div className="ai-partner-settings-avatar-desc">支持直接上传图片，保存后会同步更新伙伴头像。</div>
-                </div>
-                <button
-                  className="ai-partner-settings-upload-btn"
-                  disabled={partnerSaving || partnerAvatarUploading}
-                  type="button"
-                  onClick={() => partnerAvatarInputRef.current?.click()}
-                >
-                  {partnerAvatarUploading ? '上传中...' : '上传头像'}
-                </button>
-              </div>
-              <label className="ai-partner-settings-field">
-                <span className="ai-partner-settings-field-label">
-                  伙伴名称
-                  <span className="ai-partner-settings-label-required">*</span>
-                </span>
-                <input
-                  className="ai-partner-settings-input"
-                  disabled={partnerSaving || partnerAvatarUploading}
-                  type="text"
-                  value={partnerDraft?.agentName ?? builtInAgent.name}
-                  onChange={(event) => updatePartnerDraftField('agentName', event.target.value)}
+            <label className="ai-partner-settings-field">
+              <span className="ai-partner-settings-field-label">
+                伙伴名称
+                <span className="ai-partner-settings-label-required">*</span>
+              </span>
+              <input
+                className="ai-partner-settings-input"
+                disabled={partnerSaving || partnerAvatarUploading}
+                type="text"
+                value={partnerDraft?.agentName ?? builtInAgent.name}
+                onChange={(event) => updatePartnerDraftField('agentName', event.target.value)}
+              />
+            </label>
+            {PARTNER_WORKSPACE_FIELDS.map(({ field, label }) => (
+              <label className="ai-partner-settings-field" key={label}>
+                <span>{label}</span>
+                <textarea
+                  className="ai-partner-settings-textarea"
+                  disabled={partnerSaving}
+                  value={partnerDraft?.[field] ?? ''}
+                  onChange={(event) => updatePartnerDraftField(field, event.target.value)}
                 />
               </label>
-              {PARTNER_WORKSPACE_FIELDS.map(({ field, label }) => (
-                <label className="ai-partner-settings-field" key={label}>
-                  <span>{label}</span>
-                  <textarea
-                    className="ai-partner-settings-textarea"
-                    disabled={partnerSaving}
-                    value={partnerDraft?.[field] ?? ''}
-                    onChange={(event) => updatePartnerDraftField(field, event.target.value)}
-                  />
-                </label>
-              ))}
-            </div>
-
-            <div className="ai-partner-settings-actions">
-              <button className="ai-partner-settings-btn" disabled={partnerSaving || partnerAvatarUploading} type="button" onClick={closePartnerSettings}>
-                取消
-              </button>
-              <button className="ai-partner-settings-btn is-primary" disabled={partnerSaving || partnerLoading || partnerAvatarUploading || !partnerDraft?.agentName.trim()} type="button" onClick={() => { void savePartnerSettings() }}>
-                {partnerSaving ? '保存中...' : '保存'}
-              </button>
-            </div>
-            <input
-              accept="image/*"
-              className="ai-hidden-file-input"
-              onChange={handlePartnerAvatarFileChange}
-              ref={partnerAvatarInputRef}
-              type="file"
-            />
+            ))}
           </div>
-        </div>
+
+          <div className="ai-partner-settings-actions">
+            <button className="ai-partner-settings-btn" disabled={partnerSaving || partnerAvatarUploading} type="button" onClick={closePartnerSettings}>
+              取消
+            </button>
+            <button className="ai-partner-settings-btn is-primary" disabled={partnerSaving || partnerLoading || partnerAvatarUploading || !partnerDraft?.agentName.trim()} type="button" onClick={() => { void savePartnerSettings() }}>
+              {partnerSaving ? '保存中...' : '保存'}
+            </button>
+          </div>
+          <input
+            accept="image/*"
+            className="ai-hidden-file-input"
+            onChange={handlePartnerAvatarFileChange}
+            ref={partnerAvatarInputRef}
+            type="file"
+          />
+        </AiBottomSheet>
       )}
 
       {showDrawer && isPartnerRoute && (
@@ -2433,134 +2428,130 @@ export default function AIPage({
       )}
 
       {showPlusSheet && (isPartnerRoute || showCustomAgentConversationPage) && (
-        <div className="ai-plus-sheet-overlay" onClick={closePlusSheet}>
-          <div className="ai-plus-sheet" onClick={(e) => e.stopPropagation()}>
-            <div className="ai-plus-sheet-handle" />
-
-            <div className="ai-plus-sheet-grid">
-              {showFileMenu && (
-                <div className="ai-file-menu">
-                  {fileMenuItems.map((item) => (
-                    <button
-                      className="ai-file-menu-item"
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        if (item.key === 'album') {
-                          openLocalFilePicker('image')
-                          return
-                        }
-
-                        openLocalFilePicker('all')
-                      }}
-                    >
-                      <span className="ai-file-menu-label">{item.label}</span>
-                      <span className="ai-file-menu-icon">{renderFileMenuIcon(item.icon)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {plusCardItems.map((item) => (
-                <button
-                  className="ai-plus-sheet-card"
-                  key={item.key}
-                  type="button"
-                  onClick={
-                    item.key === 'file'
-                      ? () => setShowFileMenu((value) => !value)
-                      : openLibraryPage
-                  }
-                >
-                  <span className="ai-plus-sheet-card-icon">
-                    {item.key === 'file' ? (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 3 14 8 19 8" />
-                        <path d="M12 11v6" />
-                        <path d="M9 14h6" />
-                      </svg>
-                    ) : (
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M7 4.5h8.5L19 8v11a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 19V6a1.5 1.5 0 0 1 1.5-1.5z" />
-                        <polyline points="15.5 4.5 15.5 8 19 8" />
-                        <line x1="9" y1="12" x2="15" y2="12" />
-                        <line x1="9" y1="15.5" x2="15" y2="15.5" />
-                      </svg>
-                    )}
-                  </span>
-                  <span className="ai-plus-sheet-card-label">{item.label}</span>
-                </button>
-              ))}
-            </div>
-
-            <div className="ai-plus-sheet-list">
-              {plusListItems.map((item) => (
-                item.key === 'skills' ? (
+        <AiBottomSheet className="ai-plus-sheet" label="更多操作" onClose={closePlusSheet}>
+          <div className="ai-plus-sheet-grid">
+            {showFileMenu && (
+              <div className="ai-file-menu">
+                {fileMenuItems.map((item) => (
                   <button
-                    className="ai-plus-sheet-row"
+                    className="ai-file-menu-item"
                     key={item.key}
                     type="button"
-                    onClick={openSkillSelectorPage}
+                    onClick={() => {
+                      if (item.key === 'album') {
+                        openLocalFilePicker('image')
+                        return
+                      }
+
+                      openLocalFilePicker('all')
+                    }}
                   >
-                    <span className="ai-plus-sheet-row-left">
-                      <span className="ai-plus-sheet-row-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M14.5 4.5a3 3 0 0 1 4.24 4.24l-1.42 1.42-4.24-4.24z" />
-                          <path d="M13.09 5.91 5.3 13.7a2 2 0 0 0 0 2.83l2.17 2.17a2 2 0 0 0 2.83 0l7.79-7.79" />
-                          <path d="m8.5 11.5 4 4" />
-                        </svg>
-                      </span>
-                      <span className="ai-plus-sheet-row-label">{item.label}</span>
-                    </span>
-                    <span className="ai-plus-sheet-row-arrow">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="9 18 15 12 9 6" />
+                    <span className="ai-file-menu-label">{item.label}</span>
+                    <span className="ai-file-menu-icon">{renderFileMenuIcon(item.icon)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {plusCardItems.map((item) => (
+              <button
+                className="ai-plus-sheet-card"
+                key={item.key}
+                type="button"
+                onClick={
+                  item.key === 'file'
+                    ? () => setShowFileMenu((value) => !value)
+                    : openLibraryPage
+                }
+              >
+                <span className="ai-plus-sheet-card-icon">
+                  {item.key === 'file' ? (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 3 14 8 19 8" />
+                      <path d="M12 11v6" />
+                      <path d="M9 14h6" />
+                    </svg>
+                  ) : (
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M7 4.5h8.5L19 8v11a1.5 1.5 0 0 1-1.5 1.5h-10A1.5 1.5 0 0 1 6 19V6a1.5 1.5 0 0 1 1.5-1.5z" />
+                      <polyline points="15.5 4.5 15.5 8 19 8" />
+                      <line x1="9" y1="12" x2="15" y2="12" />
+                      <line x1="9" y1="15.5" x2="15" y2="15.5" />
+                    </svg>
+                  )}
+                </span>
+                <span className="ai-plus-sheet-card-label">{item.label}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="ai-plus-sheet-list">
+            {plusListItems.map((item) => (
+              item.key === 'skills' ? (
+                <button
+                  className="ai-plus-sheet-row"
+                  key={item.key}
+                  type="button"
+                  onClick={openSkillSelectorPage}
+                >
+                  <span className="ai-plus-sheet-row-left">
+                    <span className="ai-plus-sheet-row-icon">
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M14.5 4.5a3 3 0 0 1 4.24 4.24l-1.42 1.42-4.24-4.24z" />
+                        <path d="M13.09 5.91 5.3 13.7a2 2 0 0 0 0 2.83l2.17 2.17a2 2 0 0 0 2.83 0l7.79-7.79" />
+                        <path d="m8.5 11.5 4 4" />
                       </svg>
                     </span>
-                  </button>
-                ) : (
-                  <div
-                    className="ai-plus-sheet-row is-switch-row"
-                    key={item.key}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => {
+                    <span className="ai-plus-sheet-row-label">{item.label}</span>
+                  </span>
+                  <span className="ai-plus-sheet-row-arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="9 18 15 12 9 6" />
+                    </svg>
+                  </span>
+                </button>
+              ) : (
+                <div
+                  className="ai-plus-sheet-row is-switch-row"
+                  key={item.key}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    setShowFileMenu(false)
+                    setWebSearchEnabled((value) => !value)
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
                       setShowFileMenu(false)
                       setWebSearchEnabled((value) => !value)
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter' || event.key === ' ') {
-                        event.preventDefault()
-                        setShowFileMenu(false)
-                        setWebSearchEnabled((value) => !value)
-                      }
+                    }
+                  }}
+                >
+                  <span className="ai-plus-sheet-row-left">
+                    <span className="ai-plus-sheet-row-icon">
+                      <GlobalOutline fontSize={20} />
+                    </span>
+                    <span className="ai-plus-sheet-row-label">{item.label}</span>
+                  </span>
+                  <span
+                    className="ai-plus-sheet-row-switch"
+                    onClick={(event) => {
+                      event.stopPropagation()
                     }}
                   >
-                    <span className="ai-plus-sheet-row-left">
-                      <span className="ai-plus-sheet-row-icon">
-                        <GlobalOutline fontSize={20} />
-                      </span>
-                      <span className="ai-plus-sheet-row-label">{item.label}</span>
-                    </span>
-                    <span
-                      className="ai-plus-sheet-row-switch"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                      }}
-                    >
-                      <Switch
-                        aria-label="联网查询开关"
-                        checked={webSearchEnabled}
-                        className="ai-plus-sheet-network-switch"
-                        onChange={setWebSearchEnabled}
-                      />
-                    </span>
-                  </div>
-                )
-              ))}
-            </div>
+                    <Switch
+                      aria-label="联网查询开关"
+                      checked={webSearchEnabled}
+                      className="ai-plus-sheet-network-switch"
+                      onChange={setWebSearchEnabled}
+                    />
+                  </span>
+                </div>
+              )
+            ))}
           </div>
-        </div>
+        </AiBottomSheet>
       )}
 
 

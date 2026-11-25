@@ -12,6 +12,7 @@ import {
   type LibraryPageFileType,
 } from '../../../services/library'
 import AiLibraryFilePreview from './AiLibraryFilePreview'
+import { AiBottomSheet } from './AiBottomSheet'
 import { AiSearchField, AiSearchTrigger } from './AiSearchField'
 import './AiSidebarLibraryPage.css'
 
@@ -515,77 +516,65 @@ export function AiSidebarLibraryPage({
       </div>
 
       {actionTargetFile ? (
-        <div
-          className="ai-library-hub-action-overlay"
-          role="presentation"
-          onClick={closeActionSheet}
-        >
-          <div
-            className="ai-library-hub-action-sheet"
-            role="dialog"
-            aria-modal="true"
-            aria-label="库文件更多操作"
-            onClick={(event) => event.stopPropagation()}
+        <AiBottomSheet className="ai-library-hub-action-sheet" label="库文件更多操作" onClose={closeActionSheet}>
+          <div className="ai-library-hub-action-sheet-title">{actionTargetFile.fileName || '更多操作'}</div>
+          <div className="ai-library-hub-action-sheet-meta">{buildListMeta(actionTargetFile)}</div>
+
+          {isImSession(actionTargetFile.sessionId) ? null : (
+            <button
+              className="ai-library-hub-action-btn"
+              disabled={Boolean(actionLoadingKey)}
+              type="button"
+              onClick={() => handleViewSession(actionTargetFile)}
+            >
+              查看对话
+            </button>
+          )}
+
+          {actionTargetFile.fileType === 'document' ? (
+            <button
+              className="ai-library-hub-action-btn"
+              disabled={Boolean(actionLoadingKey)}
+              type="button"
+              onClick={() => {
+                void handleDownloadFile(actionTargetFile)
+              }}
+            >
+              {actionLoadingKey === 'download' ? '下载中...' : '下载'}
+            </button>
+          ) : null}
+
+          <button
+            className="ai-library-hub-action-btn"
+            disabled={Boolean(actionLoadingKey)}
+            type="button"
+            onClick={() => {
+              void handleSaveToPersonalLibrary(actionTargetFile)
+            }}
           >
-            <div className="ai-library-hub-action-sheet-title">{actionTargetFile.fileName || '更多操作'}</div>
-            <div className="ai-library-hub-action-sheet-meta">{buildListMeta(actionTargetFile)}</div>
+            {actionLoadingKey === 'save-personal' ? '处理中...' : '添加到个人资料库'}
+          </button>
 
-            {isImSession(actionTargetFile.sessionId) ? null : (
-              <button
-                className="ai-library-hub-action-btn"
-                disabled={Boolean(actionLoadingKey)}
-                type="button"
-                onClick={() => handleViewSession(actionTargetFile)}
-              >
-                查看对话
-              </button>
-            )}
+          <button
+            className="ai-library-hub-action-btn"
+            disabled={Boolean(actionLoadingKey)}
+            type="button"
+            onClick={() => {
+              void handleSaveToOrganizationLibrary(actionTargetFile)
+            }}
+          >
+            {actionLoadingKey === 'save-organization' ? '处理中...' : '添加到组织资料库'}
+          </button>
 
-            {actionTargetFile.fileType === 'document' ? (
-              <button
-                className="ai-library-hub-action-btn"
-                disabled={Boolean(actionLoadingKey)}
-                type="button"
-                onClick={() => {
-                  void handleDownloadFile(actionTargetFile)
-                }}
-              >
-                {actionLoadingKey === 'download' ? '下载中...' : '下载'}
-              </button>
-            ) : null}
-
-            <button
-              className="ai-library-hub-action-btn"
-              disabled={Boolean(actionLoadingKey)}
-              type="button"
-              onClick={() => {
-                void handleSaveToPersonalLibrary(actionTargetFile)
-              }}
-            >
-              {actionLoadingKey === 'save-personal' ? '处理中...' : '添加到个人资料库'}
-            </button>
-
-            <button
-              className="ai-library-hub-action-btn"
-              disabled={Boolean(actionLoadingKey)}
-              type="button"
-              onClick={() => {
-                void handleSaveToOrganizationLibrary(actionTargetFile)
-              }}
-            >
-              {actionLoadingKey === 'save-organization' ? '处理中...' : '添加到组织资料库'}
-            </button>
-
-            <button
-              className="ai-library-hub-action-btn is-cancel"
-              disabled={Boolean(actionLoadingKey)}
-              type="button"
-              onClick={closeActionSheet}
-            >
-              取消
-            </button>
-          </div>
-        </div>
+          <button
+            className="ai-library-hub-action-btn is-cancel"
+            disabled={Boolean(actionLoadingKey)}
+            type="button"
+            onClick={closeActionSheet}
+          >
+            取消
+          </button>
+        </AiBottomSheet>
       ) : null}
     </div>
   )

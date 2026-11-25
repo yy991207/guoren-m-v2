@@ -8,6 +8,7 @@ import {
   type AgentTemplateItem,
   type GeneratedAgentTemplateRecommendedSkill,
 } from '../../../services/agentTemplates'
+import { AiBottomSheet } from './AiBottomSheet'
 
 type AiCreateAgentModalProps = {
   visible: boolean
@@ -316,116 +317,108 @@ export function AiCreateAgentModal({
   }
 
   return (
-    <div className="ai-create-agent-modal-overlay is-bottom-sheet" onClick={onClose}>
-      <div
-        aria-label="创建智能体"
-        aria-modal="true"
-        className="ai-create-agent-modal is-bottom-sheet"
-        role="dialog"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <button aria-label="关闭创建智能体弹窗" className="ai-create-agent-modal-close" type="button" onClick={onClose}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <path d="M6 6L18 18" />
-            <path d="M18 6L6 18" />
-          </svg>
-        </button>
+    <AiBottomSheet className="ai-create-agent-modal" label="创建智能体" onClose={onClose}>
+      <button aria-label="关闭创建智能体弹窗" className="ai-create-agent-modal-close" type="button" onClick={onClose}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <path d="M6 6L18 18" />
+          <path d="M18 6L6 18" />
+        </svg>
+      </button>
 
-        <div className="ai-create-agent-modal-hero">
-          <img alt="" className="ai-create-agent-modal-hero-image" src={HEADER_ILLUSTRATION_URL} />
+      <div className="ai-create-agent-modal-hero">
+        <img alt="" className="ai-create-agent-modal-hero-image" src={HEADER_ILLUSTRATION_URL} />
+      </div>
+
+      <div className="ai-create-agent-modal-content">
+        <h2 className="ai-create-agent-modal-title">即刻创建你的果仁团队助手</h2>
+
+        <div className="ai-create-agent-modal-features">
+          {FEATURE_CARDS.map((item, index) => (
+            <div className="ai-create-agent-modal-feature" key={item.title}>
+              <span className="ai-create-agent-modal-feature-icon">{index + 1}</span>
+              <span className="ai-create-agent-modal-feature-copy">
+                <span className="ai-create-agent-modal-feature-title">{item.title}</span>
+                <span className="ai-create-agent-modal-feature-desc">{item.description}</span>
+              </span>
+            </div>
+          ))}
         </div>
 
-        <div className="ai-create-agent-modal-content">
-          <h2 className="ai-create-agent-modal-title">即刻创建你的果仁团队助手</h2>
+        <div className="ai-create-agent-modal-input-wrap">
+          <textarea
+            className="ai-create-agent-modal-textarea"
+            disabled={isSubmitting}
+            maxLength={500}
+            placeholder="比如：我想要一个学习助手，能根据我的学习目标制定专属计划，梳理知识脉络和重点难点，用通俗易懂的方式讲解复杂概念，帮我高效掌握新知识。"
+            value={inputValue}
+            onKeyDown={handleTextareaKeyDown}
+            onChange={(event) => setInputValue(event.target.value)}
+          />
+          <button
+            aria-label="发送创建请求"
+            className={`ai-create-agent-modal-send${inputValue.trim() && !isSubmitting ? ' is-active' : ''}${isSubmitting ? ' is-loading' : ''}`}
+            disabled={!inputValue.trim() || isSubmitting}
+            type="button"
+            onClick={() => {
+              void startGeneration()
+            }}
+          >
+            {isSubmitting ? (
+              <span aria-hidden="true" className="ai-create-agent-modal-send-spinner" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 19V5" />
+                <path d="M5 12l7-7 7 7" />
+              </svg>
+            )}
+          </button>
+        </div>
 
-          <div className="ai-create-agent-modal-features">
-            {FEATURE_CARDS.map((item, index) => (
-              <div className="ai-create-agent-modal-feature" key={item.title}>
-                <span className="ai-create-agent-modal-feature-icon">{index + 1}</span>
-                <span className="ai-create-agent-modal-feature-copy">
-                  <span className="ai-create-agent-modal-feature-title">{item.title}</span>
-                  <span className="ai-create-agent-modal-feature-desc">{item.description}</span>
-                </span>
-              </div>
-            ))}
-          </div>
+        {isSubmitting ? <div className="ai-create-agent-modal-loading-text">正在努力生成中...</div> : null}
 
-          <div className="ai-create-agent-modal-input-wrap">
-            <textarea
-              className="ai-create-agent-modal-textarea"
-              disabled={isSubmitting}
-              maxLength={500}
-              placeholder="比如：我想要一个学习助手，能根据我的学习目标制定专属计划，梳理知识脉络和重点难点，用通俗易懂的方式讲解复杂概念，帮我高效掌握新知识。"
-              value={inputValue}
-              onKeyDown={handleTextareaKeyDown}
-              onChange={(event) => setInputValue(event.target.value)}
-            />
+        {errorText ? (
+          <div className="ai-create-agent-modal-error-wrap">
+            <div className="ai-create-agent-modal-error-text">{errorText}</div>
             <button
-              aria-label="发送创建请求"
-              className={`ai-create-agent-modal-send${inputValue.trim() && !isSubmitting ? ' is-active' : ''}${isSubmitting ? ' is-loading' : ''}`}
-              disabled={!inputValue.trim() || isSubmitting}
+              className="ai-create-agent-modal-retry-btn"
               type="button"
               onClick={() => {
                 void startGeneration()
               }}
             >
-              {isSubmitting ? (
-                <span aria-hidden="true" className="ai-create-agent-modal-send-spinner" />
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 19V5" />
-                  <path d="M5 12l7-7 7 7" />
-                </svg>
-              )}
+              重试
             </button>
           </div>
+        ) : null}
 
-          {isSubmitting ? <div className="ai-create-agent-modal-loading-text">正在努力生成中...</div> : null}
-
-          {errorText ? (
-            <div className="ai-create-agent-modal-error-wrap">
-              <div className="ai-create-agent-modal-error-text">{errorText}</div>
-              <button
-                className="ai-create-agent-modal-retry-btn"
-                type="button"
-                onClick={() => {
-                  void startGeneration()
-                }}
-              >
-                重试
-              </button>
+        {!isSubmitting ? (
+          <>
+            <div className="ai-create-agent-modal-templates-title">没有灵感？试试果仁模板~</div>
+            <div className="ai-create-agent-modal-templates">
+              {templatesLoading ? (
+                <div className="ai-create-agent-modal-templates-state">模板加载中...</div>
+              ) : templates.length === 0 ? (
+                <div className="ai-create-agent-modal-templates-state">暂无模板</div>
+              ) : (
+                templates.map((template) => (
+                  <button
+                    className={`ai-create-agent-modal-template${templateClicking === template.templateId ? ' is-loading' : ''}`}
+                    disabled={templateClicking === template.templateId}
+                    key={template.templateId}
+                    title={template.description}
+                    type="button"
+                    onClick={() => {
+                      void handleUseTemplate(template)
+                    }}
+                  >
+                    {templateClicking === template.templateId ? '加载中...' : template.templateName}
+                  </button>
+                ))
+              )}
             </div>
-          ) : null}
-
-          {!isSubmitting ? (
-            <>
-              <div className="ai-create-agent-modal-templates-title">没有灵感？试试果仁模板~</div>
-              <div className="ai-create-agent-modal-templates">
-                {templatesLoading ? (
-                  <div className="ai-create-agent-modal-templates-state">模板加载中...</div>
-                ) : templates.length === 0 ? (
-                  <div className="ai-create-agent-modal-templates-state">暂无模板</div>
-                ) : (
-                  templates.map((template) => (
-                    <button
-                      className={`ai-create-agent-modal-template${templateClicking === template.templateId ? ' is-loading' : ''}`}
-                      disabled={templateClicking === template.templateId}
-                      key={template.templateId}
-                      title={template.description}
-                      type="button"
-                      onClick={() => {
-                        void handleUseTemplate(template)
-                      }}
-                    >
-                      {templateClicking === template.templateId ? '加载中...' : template.templateName}
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
-          ) : null}
-        </div>
+          </>
+        ) : null}
       </div>
-    </div>
+    </AiBottomSheet>
   )
 }
