@@ -13,26 +13,20 @@
 
 .ai-draft-attachment {
   position: relative;
-  box-sizing: border-box;
-  display: grid;
-  grid-template: auto auto / 28px minmax(0, 1fr);
-  align-content: center;
-  align-items: center;
-  column-gap: 8px;
-  flex: 0 0 144px;
+  flex: 0 0 190px;
   height: 56px;
-  padding: 0 24px 0 8px;
   overflow: hidden;
-  border: 1px solid #e8e9eb;
   border-radius: 11px;
-  background: #f6f7f8;
 }
 
 .ai-draft-attachment[data-thumbnail='true'] {
-  display: block;
   flex-basis: 56px;
-  padding: 0;
-  border: 0;
+  background: #f6f7f8;
+}
+
+.ai-draft-attachment .ai-chat-attachment-file {
+  padding-inline-end: 24px;
+  background: #f3f4f5;
 }
 
 .ai-draft-attachment__thumbnail {
@@ -43,35 +37,7 @@
   -webkit-touch-callout: none;
 }
 
-.ai-draft-attachment__file-icon {
-  display: grid;
-  grid-row: 1 / 3;
-  height: 28px;
-  place-items: center;
-  border-radius: 7px;
-  background: #e9ecef;
-  color: #555d67;
-}
-
-.ai-draft-attachment__name {
-  min-width: 0;
-  overflow: hidden;
-  color: #25282d;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 17px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .ai-draft-attachment__status {
-  grid-column: 2;
-  color: #62676e;
-  font-size: 11px;
-  line-height: 15px;
-}
-
-.ai-draft-attachment[data-thumbnail='true'] .ai-draft-attachment__status {
   position: absolute;
   inset: auto 0 0;
   padding: 1px 2px 2px;

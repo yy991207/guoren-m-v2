@@ -14,6 +14,7 @@ import {
 import AiLibraryFilePreview from './AiLibraryFilePreview'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiFilterDropdown } from './AiFilterDropdown'
+import { AiFileItemContent } from './AiFileItemContent'
 import { AiSearchField, AiSearchTrigger } from './AiSearchField'
 import './AiSidebarLibraryPage.css'
 
@@ -57,17 +58,6 @@ function getFileTypeLabel(fileType: Exclude<LibraryPageFileType, 'all'>): string
   if (fileType === 'review') return '评课'
   if (fileType === 'whiteboard') return '白板'
   return '其他'
-}
-
-function getFileTypeBadge(fileType: Exclude<LibraryPageFileType, 'all'>): string {
-  if (fileType === 'document') return 'DOC'
-  if (fileType === 'image') return 'IMG'
-  if (fileType === 'video') return 'VID'
-  if (fileType === 'audio') return 'AUD'
-  if (fileType === 'classroom') return 'CLS'
-  if (fileType === 'review') return 'REV'
-  if (fileType === 'whiteboard') return 'WBD'
-  return 'FILE'
 }
 
 function formatDateTime(value: string): string {
@@ -438,11 +428,7 @@ export function AiSidebarLibraryPage({
               type="button"
               onClick={() => void handleOpenLibraryFile(item)}
             >
-              <span className={`ai-library-hub-item-badge type-${item.fileType}`}>{getFileTypeBadge(item.fileType)}</span>
-              <span className="ai-library-hub-item-body">
-                <span className="ai-library-hub-item-name">{item.fileName}</span>
-                <span className="ai-library-hub-item-meta">{buildListMeta(item)}</span>
-              </span>
+              <AiFileItemContent fileType={item.fileType} name={item.fileName} meta={buildListMeta(item)} />
             </button>
             <button
               aria-label="更多操作"

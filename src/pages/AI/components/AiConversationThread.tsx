@@ -2,10 +2,12 @@ import { type ReactNode, type RefObject, useMemo, useState } from 'react'
 import { Toast } from 'antd-mobile'
 import type {
   ChatArtifactItem,
+  ChatAttachment,
   ChatMessage,
   ChatToolCall,
 } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
+import { isChatAttachmentImage } from '../utils/chatAttachmentFile'
 import { AiMarkdownContent } from './AiMarkdownContent'
 import { AiSentAttachments } from './AiSentAttachments'
 import {
@@ -17,6 +19,7 @@ type AiConversationThreadProps = {
   messages: ChatMessage[]
   routeSessionId: string | null
   showSentAttachmentCards?: boolean
+  onPreviewAttachment?: (attachment: ChatAttachment) => void
   scrollRef: RefObject<HTMLDivElement | null>
   onSelectArtifact: (artifact: SelectedArtifact) => void
 }
@@ -774,14 +777,20 @@ function AssistantOutputMessage({
   )
 }
 
-function UserMessage({ message, showSentAttachmentCards }: { message: ChatMessage; showSentAttachmentCards: boolean }) {
+function UserMessage({ message, showSentAttachmentCards, onPreviewAttachment }: {
+  message: ChatMessage
+  showSentAttachmentCards: boolean
+  onPreviewAttachment: AiConversationThreadProps['onPreviewAttachment']
+}) {
   const hasAttachments = message.attachments.length > 0
   const showAttachmentTray = hasAttachments && showSentAttachmentCards
+  const hasGallery = showAttachmentTray && message.attachments.length > 1
+  const hasWideFileStrip = hasGallery && message.attachments.some(attachment => !isChatAttachmentImage(attachment.name))
 
   return (
-    <div className="ai-chat-row is-user">
-      <div className="ai-chat-user-stack" data-sent-gallery={showAttachmentTray && message.attachments.length > 1 ? '' : undefined}>
-        {showAttachmentTray && <AiSentAttachments attachments={message.attachments} />}
+    <div className="ai-chat-row is-user" data-wide-file-strip={hasWideFileStrip ? '' : undefined}>
+      <div className="ai-chat-user-stack" data-sent-gallery={hasGallery ? '' : undefined}>
+        {showAttachmentTray && <AiSentAttachments attachments={message.attachments} onPreview={onPreviewAttachment} />}
         {(!showAttachmentTray || message.content) && (
           <div className="ai-chat-bubble is-user">
             {!showSentAttachmentCards && hasAttachments && (
@@ -823,6 +832,7 @@ export function AiConversationThread({
   messages,
   routeSessionId,
   showSentAttachmentCards = false,
+  onPreviewAttachment,
   scrollRef,
   onSelectArtifact,
 }: AiConversationThreadProps) {
@@ -854,7 +864,8 @@ export function AiConversationThread({
       {groups.map((group) => {
         if (group.type === 'user') {
           return group.messages.map((message) => (
-            <UserMessage key={message.id} message={message} showSentAttachmentCards={showSentAttachmentCards} />
+            <UserMessage key={message.id} message={message} showSentAttachmentCards={showSentAttachmentCards}
+              onPreviewAttachment={onPreviewAttachment} />
           ))
         }
 

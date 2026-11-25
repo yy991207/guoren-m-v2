@@ -15,6 +15,7 @@ export interface ChatAttachment {
   objectKey?: string
   resourceId?: string
   url?: string
+  sizeBytes?: number
 }
 
 export interface ChatReference {

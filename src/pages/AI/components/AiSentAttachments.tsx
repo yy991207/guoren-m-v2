@@ -1,17 +1,22 @@
 import { useState } from 'react'
-import { FileOutline } from 'antd-mobile-icons'
 import type { ChatAttachment } from '../../../services/chat/types'
+import { isChatAttachmentImage } from '../utils/chatAttachmentFile'
+import { AiChatAttachmentFile } from './AiChatAttachmentFile'
 import { ZoomableImagePreview } from './file-preview/zoomable-image-preview'
 import './AiSentAttachments.css'
 
-const IMAGE_NAME = /\.(?:avif|bmp|gif|jpe?g|png|svg|webp)$/i
 const DIRECT_IMAGE_URL = /^(?:https?:\/\/|\/(?!\/|\\))/i
 
-function AiSentAttachment({ attachment }: { attachment: ChatAttachment }) {
+type AiSentAttachmentsProps = {
+  attachments: readonly ChatAttachment[]
+  onPreview?: (attachment: ChatAttachment) => void
+}
+
+function AiSentAttachment({ attachment, onPreview }: { attachment: ChatAttachment; onPreview: AiSentAttachmentsProps['onPreview'] }) {
   const url = attachment.url?.trim()
   const [failedUrl, setFailedUrl] = useState<string>()
   // 只读消息已有的图片地址，失效时保留文件卡片，不额外申请下载地址。
-  const imageUrl = url && url !== failedUrl && IMAGE_NAME.test(attachment.name) && DIRECT_IMAGE_URL.test(url) ? url : undefined
+  const imageUrl = url && url !== failedUrl && isChatAttachmentImage(attachment.name) && DIRECT_IMAGE_URL.test(url) ? url : undefined
 
   return (
     <li className="ai-sent-attachment" data-image={Boolean(imageUrl)} title={attachment.name}>
@@ -27,20 +32,18 @@ function AiSentAttachment({ attachment }: { attachment: ChatAttachment }) {
           }}
         />
       ) : (
-        <>
-          <span aria-hidden="true" className="ai-sent-attachment__icon"><FileOutline width={20} height={20} /></span>
-          <span className="ai-sent-attachment__name">{attachment.name}</span>
-        </>
+        <AiChatAttachmentFile attachment={attachment} onPreview={onPreview} />
       )}
     </li>
   )
 }
 
-export function AiSentAttachments({ attachments }: { attachments: readonly ChatAttachment[] }) {
+export function AiSentAttachments({ attachments, onPreview }: AiSentAttachmentsProps) {
+  const hasGallery = attachments.length > 1
   return (
-    <ul aria-label="已发送附件" className="ai-sent-attachments" data-gallery={attachments.length > 1}
-      data-overflow={attachments.length > 3} role="list" tabIndex={attachments.length > 3 ? 0 : undefined}>
-      {attachments.map(attachment => <AiSentAttachment attachment={attachment} key={attachment.id} />)}
+    <ul aria-label="已发送附件" className="ai-sent-attachments" data-gallery={hasGallery}
+      role="list" tabIndex={hasGallery ? 0 : undefined}>
+      {attachments.map(attachment => <AiSentAttachment attachment={attachment} key={attachment.id} onPreview={onPreview} />)}
     </ul>
   )
 }

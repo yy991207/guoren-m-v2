@@ -42,6 +42,23 @@ it('本地图片显示缩略图，文档保留进度；删除调用原回调并�
   expect(revoke).toHaveBeenCalledWith('blob:attachment-fixture')
 })
 
+it('完成的普通文件可预览、可删除，解析中的文件只显示进度', () => {
+  const uploaded: ChatAttachment = { ...document, id: 'ready', name: '说明.md', status: 'completed', sizeBytes: 1024,
+    url: 'https://example.test/readme.md' }
+  const onPreview = vi.fn()
+  const onRemove = vi.fn()
+  render(<AiDraftAttachments attachments={[uploaded, document]} imageFiles={new Map()} onPreview={onPreview} onRemove={onRemove} />)
+
+  expect(screen.getByText('MD · 1.0 KB')).toBeVisible()
+  expect(screen.getByText('解析中')).toBeVisible()
+  expect(screen.queryByRole('button', { name: '预览文件：材料.pdf' })).not.toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '预览文件：说明.md' }))
+  expect(onPreview).toHaveBeenCalledWith(uploaded)
+  fireEvent.click(screen.getByRole('button', { name: '说明.md 删除附件' }))
+  expect(onRemove).toHaveBeenCalledWith('ready')
+  expect(onPreview).toHaveBeenCalledTimes(1)
+})
+
 it('图片无法解码时保留文件名、上传状态和删除入口', () => {
   mockLocalPreview()
   const file = new File(['fixture'], '照片.jpg', { type: 'image/jpeg' })

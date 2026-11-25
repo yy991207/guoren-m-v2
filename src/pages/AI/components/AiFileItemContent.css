@@ -1,0 +1,104 @@
+.ai-file-item-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+}
+
+.ai-file-item-content__badge {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-file-item-content__badge.type-document {
+  background: #4a7cff;
+}
+
+.ai-file-item-content__badge.type-image {
+  background: #ff8a34;
+}
+
+.ai-file-item-content__badge.type-video {
+  background: #8d5bff;
+}
+
+.ai-file-item-content__badge.type-audio {
+  background: #25b864;
+}
+
+.ai-file-item-content__badge.type-classroom {
+  background: #d946ef;
+}
+
+.ai-file-item-content__badge.type-review {
+  background: #0f766e;
+}
+
+.ai-file-item-content__badge.type-whiteboard {
+  background: #f59e0b;
+}
+
+.ai-file-item-content__badge.type-other {
+  background: #8c8f96;
+}
+
+.ai-file-item-content__body {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-file-item-content__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-file-item-content__meta {
+  font-size: 12px;
+  line-height: 1.6;
+  color: #6b7280;
+  word-break: break-word;
+}
+
+.ai-file-item-content[data-compact] {
+  gap: 8px;
+}
+
+.ai-file-item-content[data-compact] .ai-file-item-content__badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  font-size: 9px;
+}
+
+.ai-file-item-content[data-compact] .ai-file-item-content__body {
+  gap: 3px;
+}
+
+.ai-file-item-content[data-compact] .ai-file-item-content__name {
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.ai-file-item-content[data-compact] .ai-file-item-content__meta {
+  font-size: 11px;
+  line-height: 14px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react'
-import { CloseOutline, FileOutline } from 'antd-mobile-icons'
+import { CloseOutline } from 'antd-mobile-icons'
 import type { ChatAttachment } from '../../../services/chat/types'
+import { AiChatAttachmentFile } from './AiChatAttachmentFile'
 import './AiDraftAttachments.css'
 
 type AiDraftAttachmentsProps = {
   attachments: readonly ChatAttachment[]
   imageFiles: ReadonlyMap<string, File>
+  onPreview?: (attachment: ChatAttachment) => void
   onRemove: (id: string) => void
 }
 
-function AiDraftAttachment({ attachment, imageFile, onRemove }: {
+function AiDraftAttachment({ attachment, imageFile, onPreview, onRemove }: {
   attachment: ChatAttachment
   imageFile?: File
+  onPreview: AiDraftAttachmentsProps['onPreview']
   onRemove: AiDraftAttachmentsProps['onRemove']
 }) {
   const [previewUrl, setPreviewUrl] = useState<string>()
@@ -35,12 +38,9 @@ function AiDraftAttachment({ attachment, imageFile, onRemove }: {
         <img alt={attachment.name} className="ai-draft-attachment__thumbnail" decoding="async" draggable={false}
           loading="lazy" src={thumbnail} onError={() => setPreviewUrl(undefined)} />
       ) : (
-        <>
-          <span aria-hidden="true" className="ai-draft-attachment__file-icon"><FileOutline width={19} height={19} /></span>
-          <span className="ai-draft-attachment__name">{attachment.name}</span>
-        </>
+        <AiChatAttachmentFile attachment={attachment} status={status} onPreview={onPreview} />
       )}
-      {status && <span className="ai-draft-attachment__status">{status}</span>}
+      {thumbnail && status && <span className="ai-draft-attachment__status">{status}</span>}
       <button aria-label={`${attachment.name} 删除附件`} className="ai-draft-attachment__remove" type="button"
         onClick={() => onRemove(attachment.id)}>
         <span><CloseOutline aria-hidden="true" width={10} height={10} /></span>
@@ -49,12 +49,12 @@ function AiDraftAttachment({ attachment, imageFile, onRemove }: {
   )
 }
 
-export function AiDraftAttachments({ attachments, imageFiles, onRemove }: AiDraftAttachmentsProps) {
+export function AiDraftAttachments({ attachments, imageFiles, onPreview, onRemove }: AiDraftAttachmentsProps) {
   return (
     <ul aria-label="待发送附件" className="ai-draft-attachments" role="list" tabIndex={0}>
       {attachments.map(attachment => (
         <AiDraftAttachment key={attachment.id} attachment={attachment}
-          imageFile={imageFiles.get(attachment.id)} onRemove={onRemove} />
+          imageFile={imageFiles.get(attachment.id)} onPreview={onPreview} onRemove={onRemove} />
       ))}
     </ul>
   )

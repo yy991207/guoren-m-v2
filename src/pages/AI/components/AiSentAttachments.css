@@ -12,24 +12,8 @@
 }
 
 .ai-sent-attachment {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  gap: 9px;
   min-width: 0;
   max-width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #e3e7eb;
-  border-radius: 10px;
-  background: #fff;
-  color: #25282d;
-}
-
-.ai-sent-attachment[data-image='true'] {
-  display: block;
-  padding: 0;
-  border: 0;
-  background: transparent;
 }
 
 .ai-sent-attachment__preview {
@@ -57,36 +41,14 @@
   justify-content: flex-end;
 }
 
-.ai-sent-attachments[data-gallery='false'] :is(.ai-sent-attachment__preview, .ai-sent-attachment__photo) {
+.ai-sent-attachments[data-gallery='false'] :is(.ai-sent-attachment__preview, .ai-sent-attachment__photo, .ai-chat-attachment-file) {
   margin-inline-start: auto;
-}
-
-.ai-sent-attachment__icon {
-  display: grid;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  place-items: center;
-  border-radius: 7px;
-  background: #eef0f3;
-  color: #555e69;
-}
-
-.ai-sent-attachment__name {
-  display: -webkit-box;
-  min-width: 0;
-  max-width: 170px;
-  overflow: hidden;
-  font-size: 13px;
-  font-weight: 550;
-  line-height: 16px;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .ai-sent-attachments[data-gallery='true'] {
   width: min(100%, 312px);
+  align-items: flex-start;
+  justify-content: safe flex-end;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -94,22 +56,39 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.ai-sent-attachments[data-gallery='true'][data-overflow='false'] {
-  justify-content: flex-end;
+/* 行本身拓宽，避免内容可见性优化把横滑列表裁在原消息留白上。 */
+.ai-chat-row.is-user[data-wide-file-strip] {
+  width: calc(100% + 2 * var(--ai-chat-thread-gutter));
+  margin-inline: calc(0px - var(--ai-chat-thread-gutter));
+}
+
+.ai-chat-row.is-user[data-wide-file-strip] .ai-chat-user-stack {
+  max-width: 100%;
+}
+
+.ai-chat-row.is-user[data-wide-file-strip] :is(.ai-chat-bubble, .ai-chat-message-meta) {
+  margin-inline-end: var(--ai-chat-thread-gutter);
+}
+
+.ai-chat-row.is-user[data-wide-file-strip] .ai-chat-bubble.is-user {
+  max-width: calc(100% - 40px - 2 * var(--ai-chat-thread-gutter));
+}
+
+.ai-chat-row.is-user[data-wide-file-strip] .ai-sent-attachments[data-gallery='true'] {
+  box-sizing: border-box;
+  width: 100%;
+  padding-inline: var(--ai-chat-thread-gutter);
 }
 
 .ai-sent-attachments[data-gallery='true'] > .ai-sent-attachment {
-  flex: 0 0 calc((100% - 16px) / 3);
-  flex-direction: column;
-  justify-content: center;
-  gap: 5px;
-  aspect-ratio: 1;
-  padding: 5px;
-  overflow: hidden;
-  text-align: center;
+  flex: 0 0 190px;
 }
 
-.ai-sent-attachments[data-gallery='true'] > .ai-sent-attachment[data-image='true'] { padding: 0; }
+.ai-sent-attachments[data-gallery='true'] > .ai-sent-attachment[data-image='true'] {
+  flex-basis: calc((100% - 16px) / 3);
+  aspect-ratio: 1;
+  overflow: hidden;
+}
 
 .ai-sent-attachments[data-gallery='true'] :is(.ai-sent-attachment__preview, .ai-sent-attachment__photo) {
   width: 100%;
@@ -120,11 +99,6 @@
 .ai-sent-attachments[data-gallery='true'] .ai-sent-attachment__photo {
   max-height: none;
   object-fit: cover;
-}
-
-.ai-sent-attachments[data-gallery='true'] .ai-sent-attachment__name {
-  font-size: 11px;
-  line-height: 14px;
 }
 
 .ai-sent-attachments:focus-visible,

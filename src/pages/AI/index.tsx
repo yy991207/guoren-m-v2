@@ -85,10 +85,11 @@ import {
   normalizeSessionArtifactPreviewFileType,
 } from './utils/sessionArtifactPreview'
 import {
-  MAX_LOCAL_DOCUMENT_ATTACHMENTS,
+  MAX_LOCAL_UPLOAD_FILES_PER_BATCH,
   planLocalFilesForUpload,
 } from './utils/localUploadPolicy'
 import { filterSkillItems, getSkillCardTags } from './utils/skillDisplay'
+import { getChatAttachmentFileType, getChatAttachmentPreviewUrl, isChatAttachmentImage } from './utils/chatAttachmentFile'
 import AppComposerInput from '../../components/AppComposerInput'
 import DisplayName from '../../components/DisplayName'
 import { APP_ROUTE_PATHS } from '../../routes'
@@ -519,13 +520,6 @@ export default function AIPage({
   const hasGroupedSessions = groupedSessions.today.length > 0
     || groupedSessions.within7Days.length > 0
     || groupedSessions.beyond7Days.length > 0
-  // 单次会话的本地文档解析上限要跨轮次累计，不能只看当前输入框草稿。
-  const currentConversationAttachments = useMemo(() => (
-    [
-      ...messages.flatMap((message) => message.attachments),
-      ...draftAttachments,
-    ]
-  ), [draftAttachments, messages])
 
   const builtInAgent = useMemo(() => {
     const agentName = partnerConfig?.agentName?.trim() || '建国'
@@ -854,6 +848,16 @@ export default function AIPage({
     removeDraftAttachment(attachmentId)
   }
 
+  const openAttachmentPreview = (attachment: ChatAttachment) => {
+    const url = getChatAttachmentPreviewUrl(attachment)
+    if (!url) return
+
+    // 走和对话生成文件相同的预览入口，不用附件编号二次查库。
+    setSelectedArtifact({ sessionId: routeSessionId, createdAt: '', artifact: {
+      filename: attachment.name, type: getChatAttachmentFileType(attachment.name), url, size: attachment.sizeBytes,
+    } })
+  }
+
   const handleLocalFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(event.target.files ?? [])
     event.target.value = ''
@@ -875,27 +879,17 @@ export default function AIPage({
       return
     }
 
-    const { filesToUpload, exceededParsedLimit } = planLocalFilesForUpload(validFiles, currentConversationAttachments)
-
-    if (filesToUpload.length === 0) {
-      if (exceededParsedLimit) {
-        setLocalBannerMessage(`单次对话最多解析 ${MAX_LOCAL_DOCUMENT_ATTACHMENTS} 个本地文档，超出的文档已忽略。`)
-      }
-      return
-    }
-
-    if (exceededParsedLimit) {
-      setLocalBannerMessage(`单次对话最多解析 ${MAX_LOCAL_DOCUMENT_ATTACHMENTS} 个本地文档，超出的文档已忽略。`)
-    } else {
-      setLocalBannerMessage('')
-    }
+    const { filesToUpload, exceededFileLimit } = planLocalFilesForUpload(validFiles)
+    setLocalBannerMessage(exceededFileLimit
+      ? `每批最多上传 ${MAX_LOCAL_UPLOAD_FILES_PER_BATCH} 个文件，超出的文件已忽略。`
+      : '')
 
     await Promise.all(filesToUpload.map(async (file) => {
-      const pendingAttachment = createPendingChatAttachment(file)
+      const pendingAttachment = { ...createPendingChatAttachment(file), sizeBytes: file.size }
       const controller = new AbortController()
 
       uploadAbortControllersRef.current.set(pendingAttachment.id, controller)
-      if (!isPartnerRoute && /\.(?:png|jpe?g|gif|webp|bmp|svg)$/i.test(file.name)) {
+      if (!isPartnerRoute && isChatAttachmentImage(file.name)) {
         setDraftImageFiles(current => new Map(current).set(pendingAttachment.id, file))
       }
       setDraftAttachments((current) => [...current, pendingAttachment])
@@ -1934,6 +1928,7 @@ export default function AIPage({
         {hasConversation ? (
           <AiConversationThread
             messages={messages}
+            onPreviewAttachment={openAttachmentPreview}
             onSelectArtifact={setSelectedArtifact}
             routeSessionId={routeSessionId}
             showSentAttachmentCards={!isPartnerRoute}
@@ -2215,7 +2210,8 @@ export default function AIPage({
           <AiWorkspaceComposer
             active={isAiMainPageVisible && !showSaveCommandModal && !showCurrentConversationCustomAgentDetailSheet}
             attachmentTray={draftAttachments.length > 0 ? (
-              <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles} onRemove={handleRemoveDraftAttachment} />
+              <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles}
+                onPreview={openAttachmentPreview} onRemove={handleRemoveDraftAttachment} />
             ) : undefined}
             canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !showPlusSheet}
             modelBusy={modelBusy}
