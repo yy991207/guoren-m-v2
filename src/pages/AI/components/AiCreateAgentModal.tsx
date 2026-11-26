@@ -33,15 +33,15 @@ const MAX_POLL_TIME = 120000
 const FEATURE_CARDS = [
   {
     title: '团队协作更顺手',
-    description: '一位果仁数字助手服务整个团队，对话与记忆按人和按群隔离。',
+    description: '一位数字助手服务整个团队，对话与记忆按人和按群隔离。',
   },
   {
     title: '能力丰富更专业',
-    description: '深度操作果仁与企业系统，灵活定制技能与工具。',
+    description: '深度操作企业系统，灵活定制技能与工具。',
   },
   {
-    title: '持续进化更可控',
-    description: '账密统一托管，对话日志与反馈驱动开发者持续调优。',
+    title: '先测试，再发布',
+    description: '发布前先试聊几轮，根据回复效果调整配置。',
   },
 ]
 
@@ -280,7 +280,7 @@ export function AiCreateAgentModal({
       </div>
 
       <div className="ai-create-agent-modal-content">
-        <h2 className="ai-create-agent-modal-title">即刻创建你的果仁团队助手</h2>
+        <h2 className="ai-create-agent-modal-title">即刻创建你的助手</h2>
 
         <div className="ai-create-agent-modal-features">
           {FEATURE_CARDS.map((item, index) => (
@@ -345,7 +345,7 @@ export function AiCreateAgentModal({
 
         {!isSubmitting ? (
           <>
-            <div className="ai-create-agent-modal-templates-title">没有灵感？试试果仁模板~</div>
+            <div className="ai-create-agent-modal-templates-title">没有灵感？试试已经做好的智能体～</div>
             <div className="ai-create-agent-modal-templates">
               {templatesLoading ? (
                 <AiLoading message="模板加载中…" />
