@@ -1,9 +1,7 @@
-import { DeleteOutline } from 'antd-mobile-icons'
 import type { SkillSource, SkillSummaryItem } from '../../../services/skills'
-import { getSkillCardTags } from '../utils/skillDisplay'
-import { AiCatalogCard, AiCatalogTag } from './AiCatalogCard'
-import { AiCatalogCreateButton, AiCatalogGrid, AiCatalogPage } from './AiCatalogPage'
+import { AiCatalogCreateButton, AiCatalogPage } from './AiCatalogPage'
 import { AiLoading } from './AiLoading'
+import { AiSkillCard } from './AiSkillCard'
 
 type SkillList = {
   items: SkillSummaryItem[]
@@ -16,6 +14,8 @@ type AiSkillsPageProps = {
   lists: Record<SkillSource, SkillList>
   searchValue: string
   removingId: string | null
+  addingNames: ReadonlySet<string>
+  onAdd: (skill: SkillSummaryItem) => void
   onSearchChange: (value: string) => void
   onCategoryChange: (category: SkillSource) => void
   onOpenDetail: (skill: SkillSummaryItem, category: SkillSource) => void
@@ -33,38 +33,32 @@ const CATEGORIES: ReadonlyArray<{ key: SkillSource; label: string; empty: string
 ]
 
 export function AiSkillsPage({
-  category, lists, searchValue, removingId, onSearchChange, onCategoryChange, onOpenDetail, onDelete, onUse, onCreate, onBack,
+  category, lists, searchValue, removingId, addingNames, onAdd, onSearchChange, onCategoryChange, onOpenDetail, onDelete, onUse, onCreate, onBack,
 }: AiSkillsPageProps) {
-  const renderList = ({ key, label, empty, loading }: (typeof CATEGORIES)[number]) => {
+  const renderList = ({ key, empty, loading }: (typeof CATEGORIES)[number]) => {
     const list = lists[key]
     const managed = key === 'added' || key === 'created'
     if (list.loading) return <AiLoading message={loading} variant="page" />
     if (list.error) return <div className="ai-data-status" role="alert">{list.error}</div>
     if (list.items.length === 0) return <div className="ai-data-status">{empty}</div>
     return (
-      <AiCatalogGrid>
+      <div className="ai-skill-list">
         {list.items.map(skill => {
-          const tags = getSkillCardTags(skill)
+          const selected = managed || skill.isSelected
           return (
-            <AiCatalogCard
-              avatarTone="blue"
-              busy={managed && removingId === skill.id}
-              description={skill.description || '暂无描述'}
-              footer={managed ? (
-                <button className="ai-catalog-card-action" type="button" onClick={() => onUse(skill)}>立即使用</button>
-              ) : <><AiCatalogTag>{label}</AiCatalogTag>{tags.map(tag => <AiCatalogTag key={tag}>{tag}</AiCatalogTag>)}</>}
+            <AiSkillCard
+              adding={addingNames.has(skill.skillName || skill.id)}
               key={skill.id}
-              open={{ label: `查看技能详情 ${skill.title}`, run: () => onOpenDetail(skill, key) }}
-              sideAction={managed ? (
-                <button aria-label="删除技能" className="ai-catalog-card-side-action" disabled={removingId === skill.id} type="button" onClick={() => onDelete(skill)}>
-                  <DeleteOutline aria-hidden="true" width={18} height={18} />
-                </button>
-              ) : undefined}
-              title={skill.title}
+              management={managed ? { label: key === 'added' ? '移除技能' : '删除技能', run: () => onDelete(skill) } : undefined}
+              removing={managed && removingId === skill.id}
+              selected={selected}
+              skill={skill}
+              onAction={() => selected ? onUse(skill) : onAdd({ ...skill, source: key })}
+              onOpen={() => onOpenDetail(skill, key)}
             />
           )
         })}
-      </AiCatalogGrid>
+      </div>
     )
   }
 

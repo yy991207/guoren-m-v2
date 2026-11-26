@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Dialog, Switch, Toast } from 'antd-mobile'
-import { GlobalOutline, LeftOutline } from 'antd-mobile-icons'
+import { Switch, Toast } from 'antd-mobile'
+import { GlobalOutline } from 'antd-mobile-icons'
 import { fetchCommands, mapCommandsToPromptItems, type CommandApiItem, type CommandPromptItem, type CommandsData } from '../../services/commands'
 import {
   ensureAgentUsageLog,
@@ -60,6 +60,7 @@ import AiCommandsPage, { type AiCommandsPageTabKey } from './components/AiComman
 import { AiConversationHeaderActions } from './components/AiConversationHeaderActions'
 import { AiConversationHeading } from './components/AiConversationHeading'
 import { AiCreateAgentModal } from './components/AiCreateAgentModal'
+import { AiDeleteConfirmDialog } from './components/AiDeleteConfirmDialog'
 import { AiDiscoverPage } from './components/AiDiscoverPage'
 import { AiLoading } from './components/AiLoading'
 import { AiDrawerSessionGroup } from './components/AiDrawerSessionGroup'
@@ -70,7 +71,7 @@ import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
 import { AiDraftAttachments } from './components/AiDraftAttachments'
 import { AiScrollScope } from './components/scrollbars/AiScrollScope'
-import { AiSearchField } from './components/AiSearchField'
+import { AiChatSkillPickerSheet } from './components/AiChatSkillPickerSheet'
 import { AiBottomSheet } from './components/AiBottomSheet'
 import { AiWorkspaceNavigation, type AiWorkspaceTab } from './components/AiWorkspaceNavigation'
 import { AiWorkspacePlusSheet } from './components/AiWorkspacePlusSheet'
@@ -91,7 +92,7 @@ import {
   MAX_LOCAL_UPLOAD_FILES_PER_BATCH,
   planLocalFilesForUpload,
 } from './utils/localUploadPolicy'
-import { filterSkillItems, getSkillCardTags } from './utils/skillDisplay'
+import { filterSkillItems } from './utils/skillDisplay'
 import { getChatAttachmentFileType, getChatAttachmentPreviewUrl, isChatAttachmentImage } from './utils/chatAttachmentFile'
 import AppComposerInput from '../../components/AppComposerInput'
 import DisplayName from '../../components/DisplayName'
@@ -376,7 +377,7 @@ export default function AIPage({
   const [workspaceTab, setWorkspaceTab] = useState<AiWorkspaceTab>('task')
   const [showPlusSheet, setShowPlusSheet] = useState(false)
   const showSkillsPage = workspaceTab === 'skills'
-  const [showSkillSelectorPage, setShowSkillSelectorPage] = useState(false)
+  const [showSkillSelectorSheet, setShowSkillSelectorSheet] = useState(false)
   const [showFileMenu, setShowFileMenu] = useState(false)
   const [showLibraryPage, setShowLibraryPage] = useState(false)
   const [showCustomAgentConversationPage, setShowCustomAgentConversationPage] = useState(false)
@@ -402,9 +403,11 @@ export default function AIPage({
   const { items: officialSkills } = official
   const { items: communitySkills } = clawhub
   const [selectedSkillDetail, setSelectedSkillDetail] = useState<SkillSummaryItem | null>(null)
-  const [skillActionLoadingId, setSkillActionLoadingId] = useState<string | null>(null)
+  const pendingSkillAddsRef = useRef(new Map<string, AbortController>())
+  const [addingSkillNames, setAddingSkillNames] = useState<ReadonlySet<string>>(() => new Set())
   const [removeSkillLoadingId, setRemoveSkillLoadingId] = useState<string | null>(null)
   const [deleteTargetManageSkill, setDeleteTargetManageSkill] = useState<SkillSummaryItem | null>(null)
+  const removingAddedSkill = deleteTargetManageSkill?.source !== 'created'
   const [addedSkills, setAddedSkills] = useState<SkillSummaryItem[]>([])
   const [createdSkills, setCreatedSkills] = useState<SkillSummaryItem[]>([])
   const [mySkillsLoading, setMySkillsLoading] = useState(false)
@@ -566,10 +569,10 @@ export default function AIPage({
     Boolean(currentConversationCustomAgentDetail && currentConversationCustomAgentDetail.creator_user_id === currentUserId)
   ), [currentConversationCustomAgentDetail, currentUserId])
   const isFeatureActive = workspaceTab !== 'task'
+  const composerSheetOpen = showPlusSheet || showSkillSelectorSheet
   const isAiMainPageVisible = !showDrawer
     && !isFeatureActive
     && !showCustomAgentConversationPage
-    && !showSkillSelectorPage
     && !showLibraryPage
     && !showAgentConfigPage
     && !showCreateAgentModal
@@ -598,7 +601,7 @@ export default function AIPage({
     setShowPlusSheet(false)
     setShowFileMenu(false)
     setWorkspaceTab('task')
-    setShowSkillSelectorPage(false)
+    setShowSkillSelectorSheet(false)
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
     setSelectedSkillDetail(null)
@@ -618,13 +621,15 @@ export default function AIPage({
     setShowPlusSheet(false)
   }
 
-  const openSkillSelectorPage = () => {
+  const openSkillSelectorSheet = () => {
     setShowPlusSheet(false)
     setShowFileMenu(false)
     setSkillSelectorSearchValue('')
+    setUserSkillsLoading(true)
+    setUserSkillsError('')
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
-    setShowSkillSelectorPage(true)
+    setShowSkillSelectorSheet(true)
   }
 
   const openLibraryPage = () => {
@@ -653,7 +658,7 @@ export default function AIPage({
     setShowCreateSkillSheet(false)
     setSelectedSkillDetail(null)
     setShowCustomAgentConversationPage(false)
-    setShowSkillSelectorPage(false)
+    setShowSkillSelectorSheet(false)
     setShowLibraryPage(false)
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
@@ -1088,6 +1093,14 @@ export default function AIPage({
   }, [])
 
   useEffect(() => {
+    const pending = pendingSkillAddsRef.current
+    return () => {
+      pending.forEach(controller => controller.abort())
+      pending.clear()
+    }
+  }, [])
+
+  useEffect(() => {
     if (!selectedSkillName) {
       return
     }
@@ -1248,18 +1261,17 @@ export default function AIPage({
   }, [showSkillsPage, viewingManagedSkills])
 
   useEffect(() => {
-    if (!showSkillSelectorPage) {
+    if (!showSkillSelectorSheet) {
       return
     }
 
     const controller = new AbortController()
 
     void (async () => {
-      setUserSkillsLoading(true)
-      setUserSkillsError('')
-
       try {
-        setUserSkills(await fetchUserSkills(controller.signal))
+        const skills = await fetchUserSkills(controller.signal)
+        // 关闭后再打开会重新加载，取消的旧请求不应覆盖新列表。
+        if (!controller.signal.aborted) setUserSkills(skills)
       } catch (error) {
         if (!controller.signal.aborted) {
           setUserSkills([])
@@ -1275,7 +1287,7 @@ export default function AIPage({
     return () => {
       controller.abort()
     }
-  }, [showSkillSelectorPage])
+  }, [showSkillSelectorSheet])
 
   useEffect(() => {
     if (!showLibraryPage) {
@@ -1394,7 +1406,7 @@ export default function AIPage({
     setSelectedSkillName(resolvedSkillName || null)
     setShowPlusSheet(false)
     setWorkspaceTab('task')
-    setShowSkillSelectorPage(false)
+    setShowSkillSelectorSheet(false)
     setSelectedSkillDetail(null)
   }
 
@@ -1442,40 +1454,34 @@ export default function AIPage({
     })
   }
 
-  const handleSkillDetailAction = async (skill: SkillSummaryItem) => {
-    if (skillActionLoadingId === skill.id) {
-      return
-    }
+  const handleSkillAction = async (skill: SkillSummaryItem) => {
+    const name = skill.skillName || skill.id
+    const pending = pendingSkillAddsRef.current
+    if (!name || pending.has(name)) return
 
     if (skill.isSelected) {
       applySkillItem(skill)
       return
     }
 
-    const resolvedSkillName = skill.skillName || skill.id
-
-    if (!resolvedSkillName) {
-      return
-    }
-
-    setSkillActionLoadingId(skill.id)
-
+    // 列表和详情按技能名共用同一把锁，跨分类看到同一技能时也不会重复添加。
+    const controller = new AbortController()
+    const { signal } = controller
+    pending.set(name, controller)
+    setAddingSkillNames(new Set(pending.keys()))
     try {
-      if (skill.source === 'clawhub') {
-        await installClawhubSkill(resolvedSkillName)
-      } else {
-        await addOfficialSkill(resolvedSkillName)
-      }
-
-      markSkillSelected({
-        ...skill,
-        isSelected: true,
-      })
+      if (skill.source === 'clawhub') await installClawhubSkill(name, signal)
+      else await addOfficialSkill(name, signal)
+      if (signal.aborted) return
+      markSkillSelected(skill)
       Toast.show({ content: '添加成功' })
     } catch (error) {
-      Toast.show({ content: error instanceof Error ? error.message : '添加技能失败' })
+      if (!signal.aborted) Toast.show({ content: error instanceof Error ? error.message : '添加技能失败' })
     } finally {
-      setSkillActionLoadingId(null)
+      if (!signal.aborted) {
+        pending.delete(name)
+        setAddingSkillNames(new Set(pending.keys()))
+      }
     }
   }
 
@@ -1885,8 +1891,8 @@ export default function AIPage({
 
           {showSkillsPage && (selectedSkillDetail ? (
             <AiSkillDetailPage
-              actionLoading={skillActionLoadingId === selectedSkillDetail.id}
-              onAction={handleSkillDetailAction}
+              actionLoading={addingSkillNames.has(selectedSkillDetail.skillName || selectedSkillDetail.id)}
+              onAction={handleSkillAction}
               onBack={() => setSelectedSkillDetail(null)}
               skill={selectedSkillDetail}
             />
@@ -1899,8 +1905,10 @@ export default function AIPage({
                 added: { items: visibleManageSkills.added, loading: mySkillsLoading, error: mySkillsError },
                 created: { items: visibleManageSkills.created, loading: mySkillsLoading, error: mySkillsError },
               }}
+              addingNames={addingSkillNames}
               removingId={removeSkillLoadingId}
               searchValue={viewingManagedSkills ? mySkillSearchValue : skillSearchValue}
+              onAdd={handleSkillAction}
               onBack={closeNavigationOverlays}
               onCategoryChange={setSkillCategory}
               onCreate={() => setShowCreateSkillSheet(true)}
@@ -1965,7 +1973,7 @@ export default function AIPage({
               <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles}
                 onPreview={openAttachmentPreview} onRemove={handleRemoveDraftAttachment} />
             ) : undefined}
-            canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !showPlusSheet}
+            canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !composerSheetOpen}
             modelBusy={modelBusy}
             modelControls={modelControls}
             canSubmit={canSend}
@@ -1973,7 +1981,7 @@ export default function AIPage({
             isStopping={isStopping}
             note="AI 生成内容可能有误，请核实重要信息"
             placeholder="提个问题，或让我创作、分析任意内容"
-            plusExpanded={showPlusSheet}
+            plusExpanded={composerSheetOpen}
             sessionKey={routeSessionId}
             textExpanded={textComposerExpanded}
             value={inputValue}
@@ -2186,7 +2194,7 @@ export default function AIPage({
           webSearchEnabled={webSearchEnabled}
           onClose={closePlusSheet}
           onOpenLibrary={openLibraryPage}
-          onOpenSkills={openSkillSelectorPage}
+          onOpenSkills={openSkillSelectorSheet}
           onPickFile={() => openLocalFilePicker('all')}
           onPickPhoto={() => openLocalFilePicker('image')}
           onWebSearchChange={setWebSearchEnabled}
@@ -2258,7 +2266,7 @@ export default function AIPage({
                   className="ai-plus-sheet-row"
                   key={item.key}
                   type="button"
-                  onClick={openSkillSelectorPage}
+                  onClick={openSkillSelectorSheet}
                 >
                   <span className="ai-plus-sheet-row-left">
                     <span className="ai-plus-sheet-row-icon">
@@ -2452,74 +2460,17 @@ export default function AIPage({
         onSuccess={handleSaveCommandSuccess}
       />
 
-      {showSkillSelectorPage && (
-        <div className="ai-chat-skill-picker-page">
-          <div className="ai-chat-skill-picker-header">
-            {!isPartnerRoute && !showCustomAgentConversationPage ? (
-              <button
-                aria-label="返回对话"
-                className="ai-chat-skill-picker-back"
-                type="button"
-                onClick={() => setShowSkillSelectorPage(false)}
-              >
-                <LeftOutline aria-hidden="true" width={20} height={20} />
-              </button>
-            ) : <div className="ai-chat-skill-picker-header-spacer" />}
-            <div className="ai-chat-skill-picker-title">技能</div>
-            <div className="ai-chat-skill-picker-header-spacer" />
-          </div>
-
-          <AiSearchField
-            className="ai-chat-skill-picker-search"
-            label="搜索可用技能"
-            placeholder="搜索"
-            value={skillSelectorSearchValue}
-            onChange={setSkillSelectorSearchValue}
-          />
-
-          <div className="ai-chat-skill-picker-list">
-            {userSkillsLoading ? <AiLoading message="技能加载中…" /> : null}
-            {!userSkillsLoading && userSkillsError ? <div className="ai-data-status">{userSkillsError}</div> : null}
-            {!userSkillsLoading && !userSkillsError && visibleSelectableSkills.length === 0 ? <div className="ai-data-status">暂无可用技能</div> : null}
-            {!userSkillsLoading && !userSkillsError && visibleSelectableSkills.map((skill) => {
-              const resolvedSkillName = skill.skillName || skill.id
-              const tags = getSkillCardTags(skill)
-              const isActive = selectedSkillName === resolvedSkillName
-
-              return (
-                <button
-                  className={`ai-chat-skill-picker-item ${isActive ? 'is-active' : ''}`}
-                  key={skill.id}
-                  type="button"
-                  onClick={() => applySkillItem(skill)}
-                >
-                  <AiNameAvatar
-                    ariaLabel={`${skill.title}头像`}
-                    className="ai-chat-skill-picker-item-icon"
-                    imageClassName="ai-chat-skill-picker-item-icon-image"
-                    name={skill.title}
-                    tone="blue"
-                  />
-
-                  <div className="ai-chat-skill-picker-item-body">
-                    <div className="ai-chat-skill-picker-item-top">
-                      <span className="ai-chat-skill-picker-item-title">{skill.title}</span>
-                      {tags.length > 0 ? (
-                        <div className="ai-chat-skill-picker-item-tags">
-                          {tags.map((tag) => (
-                            <span className="ai-chat-skill-picker-item-tag" key={`${skill.id}-${tag}`}>{tag}</span>
-                          ))}
-                        </div>
-                      ) : null}
-                    </div>
-                    <div className="ai-chat-skill-picker-item-name">{resolvedSkillName}</div>
-                    <div className="ai-chat-skill-picker-item-desc">{skill.description || '暂无描述'}</div>
-                  </div>
-                </button>
-              )
-            })}
-          </div>
-        </div>
+      {showSkillSelectorSheet && (
+        <AiChatSkillPickerSheet
+          error={userSkillsError}
+          loading={userSkillsLoading}
+          searchValue={skillSelectorSearchValue}
+          selectedSkillName={selectedSkillName}
+          skills={visibleSelectableSkills}
+          onClose={() => setShowSkillSelectorSheet(false)}
+          onSearchChange={setSkillSelectorSearchValue}
+          onSelect={applySkillItem}
+        />
       )}
 
       {selectedArtifact && artifactPreviewEntry ? (
@@ -2535,59 +2486,31 @@ export default function AIPage({
         />
       ) : null}
 
-      <Dialog
-        visible={Boolean(deleteTargetSession)}
-        content="确认删除后将无法恢复，是否继续？"
-        closeOnAction={false}
-        closeOnMaskClick={!deleteSessionLoading}
-        onClose={closeDeleteSessionDialog}
-        actions={[
-          [
-            {
-              key: 'cancel-session-delete',
-              text: '取消',
-              disabled: deleteSessionLoading,
-              style: { color: '#1f2329' },
-              onClick: closeDeleteSessionDialog,
-            },
-            {
-              key: 'confirm-session-delete',
-              text: deleteSessionLoading ? '删除中...' : '删除',
-              bold: true,
-              disabled: deleteSessionLoading,
-              style: { color: '#1f2329' },
-              onClick: confirmDeleteSession,
-            },
-          ],
-        ]}
-      />
+      {deleteTargetSession && (
+        <AiDeleteConfirmDialog
+          closeOnBackdrop
+          title={deleteTargetSession.session_name ? `删除对话「${deleteTargetSession.session_name}」？` : '删除这条对话？'}
+          pending={deleteSessionLoading ? { title: '正在删除对话', message: '删除中…' } : undefined}
+          onCancel={closeDeleteSessionDialog}
+          onConfirm={confirmDeleteSession}
+        />
+      )}
 
-      <Dialog
-        visible={Boolean(deleteTargetManageSkill)}
-        content="确认删除后将无法恢复，是否继续？"
-        closeOnAction={false}
-        closeOnMaskClick={!removeSkillLoadingId}
-        onClose={closeDeleteManageSkillDialog}
-        actions={[
-          [
-            {
-              key: 'cancel-manage-skill-delete',
-              text: '取消',
-              disabled: Boolean(removeSkillLoadingId),
-              style: { color: '#1f2329' },
-              onClick: closeDeleteManageSkillDialog,
-            },
-            {
-              key: 'confirm-manage-skill-delete',
-              text: removeSkillLoadingId ? '删除中...' : '删除',
-              bold: true,
-              disabled: Boolean(removeSkillLoadingId),
-              style: { color: '#1f2329' },
-              onClick: confirmDeleteManageSkill,
-            },
-          ],
-        ]}
-      />
+      {deleteTargetManageSkill && (
+        <AiDeleteConfirmDialog
+          closeOnBackdrop
+          title={`${removingAddedSkill ? '移除' : '删除'}技能「${deleteTargetManageSkill.title}」？`}
+          description={removingAddedSkill ? '移除后，该技能不再显示在「我添加的」中。' : undefined}
+          cancelLabel={removingAddedSkill ? '取消移除' : undefined}
+          confirmLabel={removingAddedSkill ? '确认移除' : undefined}
+          pending={removeSkillLoadingId ? {
+            title: removingAddedSkill ? '正在移除技能' : '正在删除技能',
+            message: removingAddedSkill ? '移除中…' : '删除中…',
+          } : undefined}
+          onCancel={closeDeleteManageSkillDialog}
+          onConfirm={confirmDeleteManageSkill}
+        />
+      )}
     </div>
     </AiScrollScope>
   )

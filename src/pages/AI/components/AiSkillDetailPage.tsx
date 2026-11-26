@@ -60,48 +60,6 @@ function buildCreatedSkillDetail(skill: SkillSummaryItem): SkillDetailItem {
   }
 }
 
-function formatLargeCount(value: number): string {
-  if (value >= 10000) {
-    const formatted = Math.round((value / 1000)) / 10
-    return `${formatted}w`
-  }
-
-  return String(value)
-}
-
-function buildMetaItems(skill: SkillSummaryItem, detail: SkillDetailItem | null) {
-  if (!detail) {
-    return []
-  }
-
-  const sourceLabel = getSkillSourceLabel(skill.source)
-
-  if (skill.source === 'clawhub') {
-    return [
-      { label: '开发者', value: detail.owner || '未知' },
-      { label: '来源', value: sourceLabel },
-      { label: '添加次数', value: formatLargeCount(detail.downloads) },
-      { label: '收藏次数', value: formatLargeCount(detail.stars) },
-    ]
-  }
-
-  if (skill.source === 'created') {
-    return [
-      { label: '来源', value: sourceLabel },
-      { label: '技能类型', value: detail.skillType || 'custom' },
-      { label: '配置项', value: String(detail.configFields.length) },
-      { label: '标签数', value: String(detail.tags.length) },
-    ]
-  }
-
-  return [
-    { label: '来源', value: sourceLabel },
-    { label: '技能类型', value: detail.skillType || 'official' },
-    { label: '配置项', value: String(detail.configFields.length) },
-    { label: '模板变量', value: String(detail.placeholders.length) },
-  ]
-}
-
 function buildSceneCards(skill: SkillSummaryItem, detail: SkillDetailItem | null) {
   const textSource = [detail?.description || '', detail?.summary || '', skill.description || '']
     .join('。')
@@ -187,7 +145,6 @@ export default function AiSkillDetailPage({
     }
   }, [skill.id, skill.skillName, skill.source])
 
-  const metaItems = useMemo(() => buildMetaItems(skill, detail), [detail, skill])
   const sceneCards = useMemo(() => buildSceneCards(skill, detail), [detail, skill])
   const examplePrompts = useMemo(() => buildExamplePrompts(skill, detail), [detail, skill])
   const actionLabel = skill.isSelected || skill.source === 'added' || skill.source === 'created' ? '使用' : '添加'
@@ -221,7 +178,9 @@ export default function AiSkillDetailPage({
             <section className="ai-skill-detail-hero">
               <AiNameAvatar
                 ariaLabel={`${detail?.title || skill.title}头像`}
+                avatarUrl={detail?.iconUrl || skill.iconUrl}
                 className="ai-skill-detail-hero-badge"
+                fallbackOnError
                 imageClassName="ai-skill-detail-hero-badge-image"
                 name={detail?.title || skill.title || skill.skillName || skill.id}
                 tone="blue"
@@ -237,16 +196,16 @@ export default function AiSkillDetailPage({
               </div>
             </section>
 
-            <section className="ai-skill-detail-meta">
-              <div className="ai-skill-detail-meta-grid">
-                {metaItems.map((item) => (
-                  <div className="ai-skill-detail-meta-item" key={item.label}>
-                    <div className="ai-skill-detail-meta-value">{item.value}</div>
-                    <div className="ai-skill-detail-meta-label">{item.label}</div>
-                  </div>
-                ))}
-              </div>
-            </section>
+            {detail && (
+              <ul className="ai-skill-detail-meta" aria-label="技能基本信息" role="list">
+                <li className="ai-skill-detail-meta-tag">
+                  <span className="ai-skill-detail-meta-label">来源：</span>{getSkillSourceLabel(skill.source)}
+                </li>
+                <li className="ai-skill-detail-meta-tag">
+                  <span className="ai-skill-detail-meta-label">技能类型：</span>{detail.skillType}
+                </li>
+              </ul>
+            )}
 
             <div className="ai-skill-detail-tabs">
               <button

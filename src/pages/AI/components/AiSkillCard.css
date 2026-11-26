@@ -1,0 +1,96 @@
+.ai-skill-list {
+  display: grid;
+  gap: 8px;
+}
+
+.ai-skill-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-inline-size: 0;
+  min-block-size: 76px;
+  padding: 9px 11px;
+  border: 1px solid #edf0f2;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.ai-skill-card-main {
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 10px;
+  min-inline-size: 0;
+}
+
+.ai-skill-card-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ai-skill-card-open:active { background: rgb(25 28 34 / 4%); }
+
+.ai-skill-card-avatar {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  overflow: hidden;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.ai-skill-card-avatar-image { inline-size: 100%; block-size: 100%; object-fit: cover; }
+.ai-skill-card-copy { display: grid; min-inline-size: 0; gap: 4px; }
+
+.ai-skill-card-title {
+  overflow: hidden;
+  color: #26292e;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-skill-card-summary {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: #69717d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ai-skill-card-action {
+  --ai-loading-size: 16px;
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  inline-size: 36px;
+  block-size: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: #f1f2f4;
+  color: #343a42;
+  cursor: pointer;
+}
+
+.ai-skill-card-action.is-management { background: transparent; color: #656d78; }
+.ai-skill-card-action:not(:disabled):active { background: #e6e9ed; }
+.ai-skill-card-action:disabled { cursor: default; }
+.ai-skill-card-open:focus-visible,
+.ai-skill-card-action:focus-visible { outline: 2px solid #626e7d; outline-offset: -2px; }

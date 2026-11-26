@@ -27,6 +27,7 @@ export interface SkillDetailItem {
   skillName: string
   title: string
   description: string
+  iconUrl?: string
   source: SkillSource
   skillType: string
   skillMarkdown: string
@@ -46,6 +47,7 @@ export interface SkillSummaryItem {
   skillName: string
   title: string
   description: string
+  iconUrl?: string
   template: string
   source: SkillSource
   tags: string[]
@@ -189,12 +191,13 @@ function normalizeSkillItems(items: unknown[], source: SkillSource): SkillSummar
       skillName,
       title,
       description,
-        template,
-        source: readSkillSourceField(record, source),
-        tags: readTags(record),
-        countLabel: buildCountLabel(record),
-        isSelected: readBooleanField(record, ['is_selected', 'isSelected']),
-      }]
+      iconUrl: readStringField(record, ['icon_url']) || undefined,
+      template,
+      source: readSkillSourceField(record, source),
+      tags: readTags(record),
+      countLabel: buildCountLabel(record),
+      isSelected: readBooleanField(record, ['is_selected', 'isSelected']),
+    }]
   })
 }
 
@@ -295,6 +298,7 @@ function normalizeOfficialSkillDetail(payload: Record<string, unknown>, skillNam
     skillName: readStringField(payload, ['skill_name', 'skillName']) || skillName,
     title: readStringField(payload, ['chinese_name', 'chineseName', 'title']) || skillName,
     description: readStringField(payload, ['description', 'summary']),
+    iconUrl: readStringField(payload, ['icon_url']) || undefined,
     source: 'official',
     skillType: readStringField(payload, ['skill_type', 'skillType']) || 'official',
     skillMarkdown: readStringField(payload, ['skill_md', 'skillMd']),
@@ -328,6 +332,7 @@ function normalizeClawhubSkillDetail(payload: ClawhubDetailResponse['data'], slu
     skillName: skill?.slug?.trim() || slug,
     title: skill?.displayName?.trim() || slug,
     description: metaContent?.DisplayDescription?.trim() || skill?.summary?.trim() || '',
+    iconUrl: payload ? readStringField(payload, ['icon_url', 'iconUrl']) || undefined : undefined,
     source: 'clawhub',
     skillType: 'clawhub',
     skillMarkdown: metaContent?.skillMd?.trim() || '',

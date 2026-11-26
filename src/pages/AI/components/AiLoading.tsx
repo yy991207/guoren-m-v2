@@ -5,10 +5,14 @@ type AiLoadingProps = {
   variant?: 'page' | 'inline'
 }
 
+export function AiLoadingRing() {
+  return <span aria-hidden="true" className="ai-loading-ring" />
+}
+
 export function AiLoading({ message, variant = 'inline' }: AiLoadingProps) {
   return (
     <div className="ai-loading" data-variant={variant} role="status">
-      <span aria-hidden="true" className="ai-loading-ring" />
+      <AiLoadingRing />
       <span className="ai-loading-message">{message}</span>
     </div>
   )

@@ -1,0 +1,63 @@
+.ai-batch-selection-bar {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  min-height: 40px;
+  color: #303030;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-batch-selection-bar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ai-batch-selection-bar button:first-child { justify-self: start; }
+.ai-batch-selection-bar button:last-child { justify-self: end; }
+
+.ai-batch-check {
+  box-sizing: border-box;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 1px solid #aaa;
+  border-radius: 4px;
+  background: #fff;
+}
+
+[aria-checked='true'] > .ai-batch-check,
+[aria-checked='mixed'] > .ai-batch-check { background: #303030; border-color: #303030; }
+[aria-checked='true'] > .ai-batch-check::after {
+  content: ''; width: 8px; height: 4px; border: solid #fff; border-width: 0 0 1.5px 1.5px; transform: translateY(-1px) rotate(-45deg);
+}
+[aria-checked='mixed'] > .ai-batch-check::after { content: ''; width: 8px; border-bottom: 2px solid #fff; }
+
+.ai-batch-delete-button {
+  flex: none;
+  width: 100%;
+  min-height: 42px;
+  margin-top: 10px;
+  border: 1px solid #dedede;
+  border-radius: 12px;
+  background: #fff;
+  color: #b12d30;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-batch-delete-button:disabled { color: #c8a5a5; cursor: default; }
+.ai-batch-delete-notice { margin: 8px 4px 0; color: #5b5050; font-size: 13px; line-height: 1.5; }

@@ -129,39 +129,29 @@
 }
 
 .ai-skill-detail-meta {
-  border-radius: 18px;
-  background: #fff;
-  border: 1px solid #edf0f4;
-  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
-.ai-skill-detail-meta-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-}
-
-.ai-skill-detail-meta-item {
-  padding: 16px 10px 14px;
-  text-align: center;
-  border-right: 1px solid #edf0f4;
-}
-
-.ai-skill-detail-meta-item:last-child {
-  border-right: none;
-}
-
-.ai-skill-detail-meta-value {
-  font-size: 18px;
-  line-height: 1.4;
-  font-weight: 700;
-  color: #1f2329;
+.ai-skill-detail-meta-tag {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e9edf1;
+  color: #303846;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .ai-skill-detail-meta-label {
-  margin-top: 6px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #98a2b3;
+  color: #565f6c;
 }
 
 .ai-skill-detail-tabs {

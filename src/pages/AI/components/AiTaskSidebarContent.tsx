@@ -1,10 +1,11 @@
 import { useId, useLayoutEffect, useMemo, useRef } from 'react'
 import { AddCircleOutline } from 'antd-mobile-icons'
 import type { GroupedChatSessions } from '../../../services/chat/session'
-import { useSidebarSessionSelection } from '../hooks/useSidebarSessionSelection'
+import { useAiBatchDelete } from '../hooks/useAiBatchDelete'
+import { AiBatchDeleteFooter, AiBatchSelectionBar } from './AiBatchDeleteControls'
 import { AiDrawerSessionGroup } from './AiDrawerSessionGroup'
 import { AiLoading } from './AiLoading'
-import { AiSessionDeleteDialog } from './AiSessionDeleteDialog'
+import { AiDeleteConfirmDialog } from './AiDeleteConfirmDialog'
 import './AiTaskSidebarContent.css'
 
 type AiTaskSidebarContentProps = {
@@ -22,6 +23,13 @@ type AiTaskSidebarContentProps = {
 }
 
 const sections = [['today', '今天'], ['within7Days', '7天内'], ['beyond7Days', '7天外']] as const
+const MAX_SESSION_BATCH = 50
+const deletionMessages = {
+  limitNotice: `每次最多选择 ${MAX_SESSION_BATCH} 条对话，请分批删除。`,
+  removeError: '删除会话失败',
+  partialFailure: (done: number, total: number, reason: string) => `已停止：已删除 ${done} / ${total} 条。${reason}，其余对话仍保持勾选。`,
+  refreshError: '会话列表刷新失败。',
+}
 
 export function AiTaskSidebarContent({
   groups, open, activeSessionId, removingSessionIds, isLoading, tasksExpanded,
@@ -32,7 +40,10 @@ export function AiTaskSidebarContent({
   const hasSessions = sections.some(([key]) => groups[key].length > 0)
   const availableIds = useMemo(() => sections.flatMap(([key]) => groups[key].map((s) => s.session_id))
     .filter((id) => !removingSessionIds.has(id)), [groups, removingSessionIds])
-  const selection = useSidebarSessionSelection({ open, availableIds, removeOne: onRemoveOne, refresh: onRefresh })
+  const selection = useAiBatchDelete({
+    enabled: open, availableIds, maxSelection: MAX_SESSION_BATCH, messages: deletionMessages,
+    removeOne: onRemoveOne, refresh: onRefresh,
+  })
   const { selecting, selected, allSelected, notice, batch } = selection
   const manageRef = useRef<HTMLButtonElement>(null)
   const selectAllRef = useRef<HTMLButtonElement>(null)
@@ -49,13 +60,14 @@ export function AiTaskSidebarContent({
   return (
     <div className="ai-task-sidebar-content">
       {selecting ? (
-        <div className="ai-task-selection-bar">
-          <button aria-checked={allSelected || (selected.size ? 'mixed' : false)} disabled={isLoading || !availableIds.length} ref={selectAllRef} role="checkbox" type="button" onClick={selection.toggleAll}>
-            <span aria-hidden="true" className="ai-task-check" />全选
-          </button>
-          <span aria-live="polite">已选 {selected.size} 条</span>
-          <button type="button" onClick={() => selection.changeMode(false)}>取消</button>
-        </div>
+        <AiBatchSelectionBar
+          allSelected={allSelected}
+          disabled={isLoading || !availableIds.length}
+          selectedCount={selected.size}
+          selectAllRef={selectAllRef}
+          onCancel={() => selection.changeMode(false)}
+          onToggleAll={selection.toggleAll}
+        />
       ) : (
         <button className="ai-task-sidebar-content__new" ref={newRef} type="button" onClick={onNewTask}>
           <AddCircleOutline aria-hidden="true" fontSize={18} /><span>新建任务</span>
@@ -88,9 +100,19 @@ export function AiTaskSidebarContent({
             selection={selecting ? selection : undefined} title={title} onOpenSession={onOpenSession} />
         ))}
       </div>
-      {notice && <p className="ai-task-selection-notice" role="status">{notice}</p>}
-      {selecting && <button className="ai-task-delete" disabled={!selected.size || isLoading} type="button" onClick={selection.askDelete}>删除对话</button>}
-      {open && batch && <AiSessionDeleteDialog total={batch.ids.length} done={batch.done} running={batch.running} onCancel={selection.cancelConfirm} onConfirm={selection.confirmDelete} />}
+      <AiBatchDeleteFooter deleteLabel="删除对话" disabled={!selected.size || isLoading} notice={notice} onDelete={selecting ? selection.askDelete : undefined} />
+      {open && batch && (
+        <AiDeleteConfirmDialog
+          title={`删除选中的 ${batch.ids.length} 条对话？`}
+          pending={batch.running ? {
+            title: '正在删除对话',
+            message: `已删除 ${batch.done} / ${batch.ids.length} 条`,
+            progress: { done: batch.done, total: batch.ids.length },
+          } : undefined}
+          onCancel={selection.cancelConfirm}
+          onConfirm={selection.confirmDelete}
+        />
+      )}
     </div>
   )
 }

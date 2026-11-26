@@ -1,6 +1,6 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
-import { expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import AIPage from './index'
 import { authorizedFetch } from '../../utils/request'
 
@@ -9,6 +9,30 @@ vi.mock('../../utils/request', async (load) => ({
   authorizedFetch: vi.fn(),
   buildAiApiUrl: (path: string) => path,
 }))
+
+const dialogMethods = ['showModal', 'close'] as const
+const nativeDialog = dialogMethods.map(key => Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, key))
+const nativeScrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
+beforeEach(() => {
+  vi.mocked(authorizedFetch).mockReset()
+  // jsdom 不实现原生模态框和滚动；几何与触摸在浏览器里验证。
+  Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
+  Object.defineProperties(HTMLDialogElement.prototype, {
+    showModal: { configurable: true, value(this: HTMLDialogElement) { this.open = true } },
+    close: { configurable: true, value(this: HTMLDialogElement) { this.open = false } },
+  })
+})
+afterEach(() => {
+  cleanup()
+  localStorage.removeItem('userInfo')
+  dialogMethods.forEach((key, index) => {
+    const native = nativeDialog[index]
+    if (native) Object.defineProperty(HTMLDialogElement.prototype, key, native)
+    else Reflect.deleteProperty(HTMLDialogElement.prototype, key)
+  })
+  if (nativeScrollTo) Object.defineProperty(HTMLElement.prototype, 'scrollTo', nativeScrollTo)
+  else Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
+})
 
 it('技能四类同页不分批，切栏保留搜索和缓存、管理详情返回原分类', async () => {
   const rows = (prefix: string) => Array.from({ length: 12 }, (_, i) => ({ skill_name: `${prefix}-${i}`, chinese_name: `示例${prefix}${i}` }))
@@ -57,14 +81,20 @@ it('技能四类同页不分批，切栏保留搜索和缓存、管理详情返�
     expect(requests).toEqual(['/api/v1/skills', '/api/v1/skills/clawhub/browse', '/api/v1/skills/clawhub/search'])
 
     fireEvent.click(screen.getByRole('tab', { name: '我添加的' }))
-    await screen.findByText('示例添加0')
+    const added = within(await screen.findByRole('article', { name: '示例添加0' }))
+    fireEvent.click(added.getByRole('button', { name: '移除技能' }))
+    const removeDialog = screen.getByRole('dialog', { name: '移除技能「示例添加0」？' })
+    expect(removeDialog).toHaveAccessibleDescription('移除后，该技能不再显示在「我添加的」中。')
+    expect(within(removeDialog).getByRole('button', { name: '确认移除' })).toBeVisible()
+    fireEvent.click(within(removeDialog).getByRole('button', { name: '取消移除' }))
     fireEvent.click(screen.getByRole('tab', { name: '我创建的' }))
     const card = within(await screen.findByRole('article', { name: '示例创建0' }))
     fireEvent.click(card.getByRole('button', { name: '删除技能' }))
-    const cancel = await screen.findByRole('button', { name: '取消' })
-    expect(screen.getByText('确认删除后将无法恢复，是否继续？')).toBeVisible()
+    const deleteDialog = screen.getByRole('dialog', { name: '删除技能「示例创建0」？' })
+    expect(deleteDialog).toHaveAccessibleDescription('删除后无法恢复。')
     expect(screen.queryByRole('button', { name: '返回技能社区' })).not.toBeInTheDocument()
-    fireEvent.click(cancel)
+    fireEvent.click(within(deleteDialog).getByRole('button', { name: '取消删除' }))
+    expect(vi.mocked(authorizedFetch).mock.calls.filter(([, options]) => options?.method === 'DELETE')).toHaveLength(0)
     fireEvent.click(card.getByRole('button', { name: '查看技能详情 示例创建0' }))
     fireEvent.click(screen.getByRole('button', { name: '返回技能社区' }))
     expect(screen.getByRole('tab', { name: '我创建的' })).toHaveAttribute('aria-selected', 'true')
@@ -72,6 +102,123 @@ it('技能四类同页不分批，切栏保留搜索和缓存、管理详情返�
   } finally {
     localStorage.removeItem('userInfo')
   }
+})
+
+it('技能卡片优先显示接口头像，缺少地址或图片加载失败才显示首字', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'skill-avatar-test' }))
+  const imageUrl = 'https://assets.test/skill.png'
+  const skills = [
+    { name: 'with-icon', chinese_name: '课程助手', icon_url: imageUrl },
+    { name: 'no-icon', chinese_name: '教案助手', icon_url: '' },
+    { name: 'broken-icon', chinese_name: '练习助手', icon_url: 'https://assets.test/missing.png' },
+  ]
+  vi.mocked(authorizedFetch).mockImplementation(async url => Response.json({
+    data: String(url) === '/api/v1/skills' ? { skills } : {},
+  }))
+  render(<MemoryRouter initialEntries={['/ai']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'AI 工作区' })).getByRole('button', { name: '技能' }))
+
+  const imageAvatar = await screen.findByRole('img', { name: '课程助手头像' })
+  expect(imageAvatar.querySelector('img')).toHaveAttribute('src', imageUrl)
+  expect(imageAvatar).not.toHaveTextContent('课')
+
+  const missingAvatar = screen.getByRole('img', { name: '教案助手头像' })
+  expect(missingAvatar.querySelector('img')).toBeNull()
+  expect(missingAvatar).toHaveTextContent('教')
+
+  const brokenAvatar = screen.getByRole('img', { name: '练习助手头像' })
+  const brokenImage = brokenAvatar.querySelector('img')!
+  expect(brokenImage).toHaveAttribute('src', skills[2].icon_url)
+  fireEvent.error(brokenImage)
+  expect(brokenImage).not.toBeInTheDocument()
+  expect(brokenAvatar).toHaveTextContent('练')
+})
+
+it('技能卡片快捷添加与详情使用同一状态，已添加后可直接回任务', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'quick-skill-test' }))
+  const skill = { id: 'official-1', skill_name: 'lesson-helper', chinese_name: '备课助手', template: '整理课程', is_selected: false }
+  const claw = { id: 'claw-1', skill_name: 'claw-helper', chinese_name: '社区助手', is_selected: false }
+  let finishAdd!: (response: Response) => void
+  const deferredAdd = new Promise<Response>(resolve => { finishAdd = resolve })
+  const requests: Array<{ path: string; body?: BodyInit | null }> = []
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (options?.method === 'POST' && path.includes('/skills')) {
+      requests.push({ path, body: options.body })
+      if (path.endsWith('/install')) return new Response(null, { status: 500 })
+      return deferredAdd
+    }
+    if (path === '/api/v1/skills') return Response.json({ data: { skills: [skill] } })
+    if (path.endsWith('/clawhub/browse')) return Response.json({ data: { skills: [{ ...skill, id: 'duplicate' }, claw] } })
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'AI 工作区' })).getByRole('button', { name: '技能' }))
+  const add = await screen.findByRole('button', { name: '添加技能 备课助手' })
+  act(() => { add.click(); add.click() })
+  expect(screen.getByRole('button', { name: '正在添加技能 备课助手' })).toBeDisabled()
+  expect(screen.queryByRole('button', { name: '返回技能社区' })).not.toBeInTheDocument()
+  expect(requests).toEqual([{ path: '/api/v1/users/quick-skill-test/skills', body: JSON.stringify({ skill_name: 'lesson-helper' }) }])
+
+  fireEvent.click(screen.getByRole('tab', { name: 'ClawHub' }))
+  expect(await screen.findByRole('button', { name: '正在添加技能 备课助手' })).toBeDisabled()
+  fireEvent.click(screen.getByRole('button', { name: '添加技能 社区助手' }))
+  expect(await screen.findByText('添加技能失败')).toBeVisible()
+  expect(screen.getByRole('button', { name: '添加技能 社区助手' })).toBeEnabled()
+  expect(requests.map(({ path }) => path)).toEqual(['/api/v1/users/quick-skill-test/skills', '/api/v1/skills/clawhub/claw-helper/install'])
+
+  await act(async () => { finishAdd(Response.json({ success: true })) })
+  const useSkill = screen.getByRole('button', { name: '使用技能 备课助手' })
+  fireEvent.click(useSkill)
+  expect(screen.getByRole('textbox', { name: '提问输入框' })).toHaveValue('基于 /lesson-helper 整理课程')
+  expect(screen.queryByRole('tablist', { name: '技能分类' })).not.toBeInTheDocument()
+})
+
+it.each([
+  { tab: '官方精选', listPath: '/api/v1/skills', source: '官方推荐', type: 'system', detailIcon: 'https://assets.test/detail.png', listIcon: 'https://assets.test/list.png' },
+  { tab: 'ClawHub', listPath: '/api/v1/skills/clawhub/browse', source: 'ClawHub', type: 'clawhub', detailIcon: 'https://assets.test/missing.png', listIcon: 'https://assets.test/list.png' },
+  { tab: '我添加的', listPath: '/api/v1/users/skill-detail-test/skills', source: '我添加的', type: 'system', listIcon: 'https://assets.test/list.png' },
+  { tab: '我创建的', listPath: '/api/v1/skills/custom', source: '我创建的', type: 'custom' },
+])('$tab 的技能详情只显示两枚基本信息标签，优先使用详情头像', async ({ tab, listPath, source, type, detailIcon, listIcon }) => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'skill-detail-test' }))
+  const title = '备课助手'
+  const skill = { skill_name: 'lesson-helper', chinese_name: title, description: '整理课程', tags: ['备课'], icon_url: listIcon }
+  vi.mocked(authorizedFetch).mockImplementation(async url => {
+    const path = String(url)
+    if (path === listPath) return Response.json({ data: { skills: [skill] } })
+    if (path === '/api/v1/skills/lesson-helper') {
+      return Response.json({ data: { ...skill, icon_url: detailIcon, skill_type: 'system', placeholders: ['主题'], template: '整理/主题' } })
+    }
+    if (path === '/api/v1/skills/clawhub/lesson-helper') {
+      return Response.json({ data: {
+        skill: { slug: skill.skill_name, displayName: title, stats: { downloads: 20, stars: 10 } },
+        iconUrl: detailIcon,
+        owner: { displayName: '发布者' }, latestVersion: { version: '1.2.3' },
+      } })
+    }
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'AI 工作区' })).getByRole('button', { name: '技能' }))
+  fireEvent.click(screen.getByRole('tab', { name: tab }))
+  fireEvent.click(await screen.findByRole('button', { name: `查看技能详情 ${title}` }))
+
+  const tags = within(await screen.findByRole('list', { name: '技能基本信息' })).getAllByRole('listitem')
+  expect(tags.map(tag => tag.textContent)).toEqual([`来源：${source}`, `技能类型：${type}`])
+  const avatar = screen.getByRole('img', { name: `${title}头像` })
+  const expectedIcon = detailIcon || listIcon
+  if (expectedIcon) expect(avatar.querySelector('img')).toHaveAttribute('src', expectedIcon)
+  if (type === 'clawhub') fireEvent.error(avatar.querySelector('img')!)
+  if (!expectedIcon || type === 'clawhub') {
+    expect(avatar.querySelector('img')).toBeNull()
+    expect(avatar).toHaveTextContent('备')
+  }
+  expect(screen.queryByText(/^(配置项|模板变量|标签数|开发者|添加次数|收藏次数)$/)).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: '使用场景' })).toBeVisible()
+  if (type === 'system') expect(screen.getByText('整理【主题】')).toBeVisible()
+  fireEvent.click(screen.getByRole('button', { name: '版本记录' }))
+  expect(screen.getByRole('heading', { name: '版本记录' })).toBeVisible()
+  if (type === 'clawhub') expect(screen.getByText('1.2.3')).toBeVisible()
 })
 
 it('三类指令都显示做同款，每张卡片只保留一个应用操作', async () => {
@@ -106,10 +253,104 @@ it('三类指令都显示做同款，每张卡片只保留一个应用操作', a
   expect(screen.getByRole('textbox', { name: '提问输入框' })).toHaveValue('原指令内容')
 })
 
+it('单条对话删除使用同一确认框，等待时不可取消，失败保留对话和提示', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'single-delete-test' }))
+  const session = { session_id: 'to-delete', session_name: '测试会话', created_at: '2026-01-01', messages: [
+    { message_id: 'm', role: 'user', content: '原消息' },
+  ] }
+  let failDelete!: (response: Response) => void
+  const pendingDelete = new Promise<Response>(resolve => { failDelete = resolve })
+  const remove = vi.fn(() => pendingDelete)
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (path.endsWith('/chat/sessions/to-delete')) return options?.method === 'DELETE' ? remove() : Response.json(session)
+    if (path.endsWith('/chat/sessions')) return Response.json({ sessions: [session] })
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai?sessionId=to-delete']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: '打开会话更多操作' }))
+  fireEvent.click(screen.getByRole('button', { name: '删除会话记录' }))
+  const dialog = screen.getByRole('dialog', { name: '删除对话「测试会话」？' })
+  expect(dialog).toHaveAccessibleDescription('删除后无法恢复。')
+  expect(remove).not.toHaveBeenCalled()
+  fireEvent.click(within(dialog).getByRole('button', { name: '确认删除' }))
+  expect(dialog).toHaveAccessibleName('正在删除对话')
+  expect(within(dialog).getByRole('status')).toHaveTextContent('删除中…')
+  expect(fireEvent(dialog, new Event('cancel', { cancelable: true }))).toBe(false)
+  expect(remove).toHaveBeenCalledTimes(1)
+  await act(async () => { failDelete(new Response(null, { status: 500 })) })
+  expect(screen.getByText('删除会话失败')).toBeVisible()
+  expect(dialog).toHaveAccessibleName('删除对话「测试会话」？')
+  fireEvent.click(within(dialog).getByRole('button', { name: '取消删除' }))
+  expect(screen.getByText('原消息')).toBeVisible()
+})
+
 function CurrentRoute() {
   const { search } = useLocation()
   return <output aria-label="当前会话地址">{search}</output>
 }
+
+it('对话内用底部弹窗搜索和选用技能，关闭不动草稿，选中不自动发送', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'chat-skill-picker-test' }))
+  const session = { session_id: 'kept', session_name: '原会话', messages: [
+    { message_id: 'msg', role: 'user', content: '原消息', created_at: '2026-01-01' },
+  ] }
+  const addedPath = '/api/v1/users/chat-skill-picker-test/skills'
+  const createdPath = '/api/v1/skills/custom'
+  const signals: AbortSignal[] = []
+  let resolveOldList!: (response: Response) => void
+  const oldList = new Promise<Response>(resolve => { resolveOldList = resolve })
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (path.endsWith('/chat/sessions/kept')) return Response.json(session)
+    if (path.endsWith('/chat/sessions')) return Response.json({ sessions: [session] })
+    if (path === addedPath) {
+      if (options?.signal) signals.push(options.signal)
+      if (signals.length === 1) return oldList
+      return Response.json({ data: { skills: [{ name: 'lesson-helper', chinese_name: '教案助手', template: '整理课程' }] } })
+    }
+    if (path === createdPath) return Response.json({ data: { skills: [{ name: 'exercise-helper', chinese_name: '习题助手' }] } })
+    return Response.json({ success: true, data: {} })
+  })
+
+  render(<MemoryRouter initialEntries={['/ai?sessionId=kept']}><AIPage onClose={vi.fn()} /><CurrentRoute /></MemoryRouter>)
+  const message = await screen.findByText('原消息')
+  const draft = screen.getByRole('textbox', { name: '提问输入框' })
+  const plus = screen.getByRole('button', { name: '打开更多操作' })
+  const openSkills = () => {
+    fireEvent.click(plus)
+    const more = within(screen.getByRole('dialog', { name: '更多操作' }))
+    fireEvent.click(more.getByRole('button', { name: '技能' }))
+    return screen.getByRole('dialog', { name: '选择技能' })
+  }
+
+  fireEvent.change(draft, { target: { value: '原有草稿' } })
+  const firstSheet = openSkills()
+  expect(firstSheet).toHaveAttribute('open')
+  expect(firstSheet.firstElementChild).toHaveClass('ai-bottom-sheet__panel')
+  expect(within(firstSheet).getByText('技能加载中…')).toBeVisible()
+  expect(message).toBeVisible()
+  fireEvent.click(within(firstSheet).getByRole('button', { name: '关闭技能选择' }))
+  expect(firstSheet).not.toBeInTheDocument()
+  expect(signals[0].aborted).toBe(true)
+  expect(draft).toHaveValue('原有草稿')
+
+  const sheet = openSkills()
+  const search = within(sheet).getByRole('searchbox', { name: '搜索可用技能' })
+  await within(sheet).findByText('教案助手')
+  expect(within(sheet).getByText('习题助手')).toBeVisible()
+  await act(async () => { resolveOldList(Response.json({ data: { skills: [{ name: 'old-skill', chinese_name: '旧数据' }] } })) })
+  expect(within(sheet).queryByText('旧数据')).not.toBeInTheDocument()
+  fireEvent.change(search, { target: { value: '教案' } })
+  expect(within(sheet).queryByText('习题助手')).not.toBeInTheDocument()
+  expect(signals).toHaveLength(2)
+  fireEvent.click(within(sheet).getByRole('button', { name: /教案助手/ }))
+  expect(sheet).not.toBeInTheDocument()
+  expect(draft).toHaveValue('基于 /lesson-helper 整理课程')
+  expect(message).toBeVisible()
+  expect(screen.getByLabelText('当前会话地址')).toHaveTextContent('?sessionId=kept')
+  expect(vi.mocked(authorizedFetch).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0)
+})
 
 it('从任务直接进入三个栏目再返回，保留原消息、草稿和会话地址，不重新加载会话', async () => {
   const session = { session_id: 'kept', session_name: '原会话', messages: [
@@ -122,9 +363,6 @@ it('从任务直接进入三个栏目再返回，保留原消息、草稿和会�
     return Response.json({ success: true, data: {} })
   })
   localStorage.setItem('userInfo', JSON.stringify({ id: 'nav-test' }))
-  // jsdom 没有滚动布局；真实滚动位置在移动尺寸浏览器中验证。
-  const scrollTo = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollTo')
-  Object.defineProperty(HTMLElement.prototype, 'scrollTo', { configurable: true, value: vi.fn() })
   try {
     render(<MemoryRouter initialEntries={['/ai?sessionId=kept']}><AIPage onClose={vi.fn()} /><CurrentRoute /></MemoryRouter>)
     const nav = within(screen.getByRole('navigation', { name: 'AI 工作区' }))
@@ -152,7 +390,5 @@ it('从任务直接进入三个栏目再返回，保留原消息、草稿和会�
     expect(vi.mocked(authorizedFetch).mock.calls.filter(([url]) => String(url).endsWith('/chat/sessions/kept'))).toHaveLength(1)
   } finally {
     localStorage.removeItem('userInfo')
-    if (scrollTo) Object.defineProperty(HTMLElement.prototype, 'scrollTo', scrollTo)
-    else Reflect.deleteProperty(HTMLElement.prototype, 'scrollTo')
   }
 })

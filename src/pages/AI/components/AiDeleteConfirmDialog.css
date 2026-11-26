@@ -1,0 +1,73 @@
+.ai-delete-confirm-dialog {
+  box-sizing: border-box;
+  width: min(320px, calc(100% - 32px));
+  max-height: 85dvh;
+  margin: auto;
+  padding: 22px;
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border: 0;
+  border-radius: 18px;
+  background: #fff;
+  color: #262626;
+}
+
+.ai-delete-confirm-dialog::backdrop { background: rgb(0 0 0 / 35%); }
+.ai-delete-confirm-dialog h2 { margin: 0; font-size: 18px; }
+
+.ai-delete-confirm-dialog p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 16px;
+  font-size: 14px;
+  color: #626262;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-delete-confirm-actions { display: flex; gap: 10px; }
+
+.ai-delete-confirm-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 4px;
+  border: 0;
+  border-radius: 10px;
+  background: #f2f2f2;
+  color: #444;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ai-delete-confirm-actions .is-destructive { color: #fff; background: #b33336; }
+
+.ai-delete-confirm-track {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #eee;
+}
+
+.ai-delete-confirm-track span {
+  display: block;
+  height: 100%;
+  background: #b33336;
+  transition: width 180ms ease;
+}
+
+.ai-delete-confirm-spinner {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #e4e4e4;
+  border-top-color: #555;
+  border-radius: 50%;
+  animation: ai-delete-confirm-turn .8s linear infinite;
+}
+
+@keyframes ai-delete-confirm-turn { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-delete-confirm-spinner { animation: none; }
+  .ai-delete-confirm-track span { transition: none; }
+}

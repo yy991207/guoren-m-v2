@@ -1,10 +1,11 @@
-import type { CSSProperties } from 'react'
+import { useState, type CSSProperties } from 'react'
 
 export type AiNameAvatarTone = 'white' | 'blue' | 'green' | 'orange' | 'detail'
 
 type AiNameAvatarProps = {
   name?: string
   avatarUrl?: string | null
+  fallbackOnError?: boolean
   tone: AiNameAvatarTone
   className: string
   imageClassName: string
@@ -83,12 +84,16 @@ export function normalizeAiAvatarUrl(avatarUrl?: string | null): string | null {
 export function AiNameAvatar({
   name,
   avatarUrl,
+  fallbackOnError,
   tone,
   className,
   imageClassName,
   ariaLabel,
 }: AiNameAvatarProps) {
+  // 只记住失败的地址，换成新地址后仍让浏览器加载图片。
+  const [failedAvatarUrl, setFailedAvatarUrl] = useState<string | null>(null)
   const normalizedAvatarUrl = normalizeAiAvatarUrl(avatarUrl)
+  const imageUrl = fallbackOnError && normalizedAvatarUrl === failedAvatarUrl ? null : normalizedAvatarUrl
   const resolvedAriaLabel = ariaLabel || `${name || '智能体'}头像`
 
   return (
@@ -97,10 +102,10 @@ export function AiNameAvatar({
       className={className}
       data-tone={tone}
       role="img"
-      style={normalizedAvatarUrl ? undefined : AI_NAME_AVATAR_FALLBACK_STYLES[tone]}
+      style={imageUrl ? undefined : AI_NAME_AVATAR_FALLBACK_STYLES[tone]}
     >
-      {normalizedAvatarUrl ? (
-        <img alt="" className={imageClassName} src={normalizedAvatarUrl} />
+      {imageUrl ? (
+        <img alt="" className={imageClassName} key={imageUrl} src={imageUrl} onError={fallbackOnError ? () => setFailedAvatarUrl(imageUrl) : undefined} />
       ) : (
         <span>{getAiNameAvatarLetter(name)}</span>
       )}
