@@ -1,14 +1,13 @@
 import { CloseOutline } from 'antd-mobile-icons'
-import type { SkillSummaryItem } from '../../../services/skills'
-import { getSkillCardTags } from '../utils/skillDisplay'
+import type { SkillSummaryItem, UserSkillGroups } from '../../../services/skills'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiLoading } from './AiLoading'
-import { AiNameAvatar } from './AiNameAvatar'
 import { AiSearchField } from './AiSearchField'
+import { AiSkillCard } from './AiSkillCard'
 import './AiChatSkillPickerSheet.css'
 
 type AiChatSkillPickerSheetProps = {
-  skills: SkillSummaryItem[]
+  skills: UserSkillGroups
   searchValue: string
   selectedSkillName: string | null
   loading: boolean
@@ -17,6 +16,8 @@ type AiChatSkillPickerSheetProps = {
   onSelect: (skill: SkillSummaryItem) => void
   onClose: () => void
 }
+
+const groups = [['created', '我创建的'], ['added', '我添加的']] as const
 
 export function AiChatSkillPickerSheet({
   skills, searchValue, selectedSkillName, loading, error, onSearchChange, onSelect, onClose,
@@ -35,42 +36,29 @@ export function AiChatSkillPickerSheet({
 
       <div className="ai-chat-skill-picker-list">
         {loading ? <AiLoading message="技能加载中…" /> : null}
-        {!loading && (error || !skills.length) ? <div className="ai-chat-skill-picker-status" role="status">{error || '暂无可用技能'}</div> : null}
-        {!loading && !error && skills.map(skill => {
-          const name = skill.skillName || skill.id
-          const tags = getSkillCardTags(skill)
-          const isActive = selectedSkillName === name
-
-          return (
-            <button
-              aria-current={isActive || undefined}
-              className={`ai-chat-skill-picker-item${isActive ? ' is-active' : ''}`}
-              key={skill.id}
-              type="button"
-              onClick={() => onSelect(skill)}
-            >
-              <AiNameAvatar
-                ariaLabel={`${skill.title}头像`}
-                className="ai-chat-skill-picker-item-icon"
-                imageClassName="ai-chat-skill-picker-item-icon-image"
-                name={skill.title}
-                tone="blue"
-              />
-              <span className="ai-chat-skill-picker-item-body">
-                <span className="ai-chat-skill-picker-item-top">
-                  <span className="ai-chat-skill-picker-item-title">{skill.title}</span>
-                  {tags.length > 0 && (
-                    <span className="ai-chat-skill-picker-item-tags">
-                      {tags.map(tag => <span className="ai-chat-skill-picker-item-tag" key={`${skill.id}-${tag}`}>{tag}</span>)}
-                    </span>
-                  )}
-                </span>
-                <span className="ai-chat-skill-picker-item-name">{name}</span>
-                <span className="ai-chat-skill-picker-item-desc">{skill.description || '暂无描述'}</span>
-              </span>
-            </button>
-          )
-        })}
+        {!loading && error && <div className="ai-chat-skill-picker-status" role="status">{error}</div>}
+        {!loading && !error && groups.map(([key, label]) => (
+          <section aria-label={label} className="ai-chat-skill-picker-group" key={key}>
+            <h3>{label}</h3>
+            {skills[key].length === 0 ? (
+              <div className="ai-chat-skill-picker-status">{searchValue.trim() ? '暂无匹配技能' : '暂无技能'}</div>
+            ) : (
+              <div className="ai-skill-list">
+                {skills[key].map(skill => {
+                  const current = selectedSkillName === (skill.skillName || skill.id)
+                  return (
+                    <AiSkillCard
+                      highlighted={current}
+                      key={skill.id}
+                      open={{ label: `选择技能 ${skill.title}`, icon: 'use', current: current || undefined, run: () => onSelect(skill) }}
+                      skill={skill}
+                    />
+                  )
+                })}
+              </div>
+            )}
+          </section>
+        ))}
       </div>
     </AiBottomSheet>
   )

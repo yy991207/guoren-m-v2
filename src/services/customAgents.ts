@@ -23,6 +23,7 @@ export type CustomAgentEnabledSkill = {
   description?: string
   template?: string
   source?: string
+  icon_url?: string | null
 }
 
 export type CustomAgentKnowledgeSpace = {

@@ -6,7 +6,7 @@ import './AiWorkspacePlusSheet.css'
 type AiWorkspacePlusSheetProps = {
   webSearchEnabled: boolean
   onWebSearchChange: (enabled: boolean) => void
-  onPickPhoto: () => void
+  onTakePhoto: () => void
   onPickFile: () => void
   onOpenLibrary: () => void
   onOpenSkills: () => void
@@ -16,7 +16,7 @@ type AiWorkspacePlusSheetProps = {
 export function AiWorkspacePlusSheet({
   webSearchEnabled,
   onWebSearchChange,
-  onPickPhoto,
+  onTakePhoto,
   onPickFile,
   onOpenLibrary,
   onOpenSkills,
@@ -25,13 +25,12 @@ export function AiWorkspacePlusSheet({
   return (
     <AiBottomSheet className="ai-workspace-plus-sheet" label="更多操作" nativeModal onClose={onClose}>
       <div className="ai-workspace-plus-sheet__tiles">
-        <button type="button" onClick={onPickPhoto}>
+        <button type="button" onClick={onTakePhoto}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3.5" y="4.5" width="17" height="15" rx="3" />
-            <circle cx="9" cy="9" r="1.35" />
-            <path d="m4 16 4-4 3 3 3.5-3.5L20 17" />
+            <path d="M4.5 7.5h3l1.5-2.5h6l1.5 2.5h3A2.5 2.5 0 0 1 22 10v7a2.5 2.5 0 0 1-2.5 2.5h-15A2.5 2.5 0 0 1 2 17v-7a2.5 2.5 0 0 1 2.5-2.5Z" />
+            <circle cx="12" cy="13" r="3.5" />
           </svg>
-          照片图库
+          拍照
         </button>
         <button type="button" onClick={onPickFile}>
           <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">

@@ -307,9 +307,12 @@ it('对话内用底部弹窗搜索和选用技能，关闭不动草稿，选中�
     if (path === addedPath) {
       if (options?.signal) signals.push(options.signal)
       if (signals.length === 1) return oldList
-      return Response.json({ data: { skills: [{ name: 'lesson-helper', chinese_name: '教案助手', template: '整理课程' }] } })
+      return Response.json({ data: { skills: [{ name: 'lesson-helper', chinese_name: '教案助手', template: '整理课程', icon_url: '/lesson-avatar.png', source: 'clawhub' }] } })
     }
-    if (path === createdPath) return Response.json({ data: { skills: [{ name: 'exercise-helper', chinese_name: '习题助手' }] } })
+    if (path === createdPath) return Response.json({ data: { skills: [
+      { name: 'exercise-helper', chinese_name: '习题助手' },
+      ...Array.from({ length: 25 }, (_, i) => ({ name: `created-${i + 1}`, chinese_name: `自建技能 ${i + 1}` })),
+    ] } })
     return Response.json({ success: true, data: {} })
   })
 
@@ -337,8 +340,17 @@ it('对话内用底部弹窗搜索和选用技能，关闭不动草稿，选中�
 
   const sheet = openSkills()
   const search = within(sheet).getByRole('searchbox', { name: '搜索可用技能' })
-  await within(sheet).findByText('教案助手')
-  expect(within(sheet).getByText('习题助手')).toBeVisible()
+  const added = within(await within(sheet).findByRole('region', { name: '我添加的' }))
+  const created = within(within(sheet).getByRole('region', { name: '我创建的' }))
+  expect(created.getAllByRole('article')).toHaveLength(26)
+  expect(created.getByRole('article', { name: '自建技能 25' })).toBeVisible()
+  const lessonCard = added.getByRole('article', { name: '教案助手' })
+  expect(lessonCard).toHaveClass('ai-skill-card')
+  const avatar = within(lessonCard).getByRole('img', { name: '教案助手头像' })
+  expect(avatar.querySelector('img')).toHaveAttribute('src', '/lesson-avatar.png')
+  fireEvent.error(avatar.querySelector('img')!)
+  expect(avatar).toHaveTextContent('教')
+  expect(created.getByRole('img', { name: '习题助手头像' })).toHaveTextContent('习')
   await act(async () => { resolveOldList(Response.json({ data: { skills: [{ name: 'old-skill', chinese_name: '旧数据' }] } })) })
   expect(within(sheet).queryByText('旧数据')).not.toBeInTheDocument()
   fireEvent.change(search, { target: { value: '教案' } })
@@ -350,6 +362,134 @@ it('对话内用底部弹窗搜索和选用技能，关闭不动草稿，选中�
   expect(message).toBeVisible()
   expect(screen.getByLabelText('当前会话地址')).toHaveTextContent('?sessionId=kept')
   expect(vi.mocked(authorizedFetch).mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0)
+})
+
+it('任务空输入切栏不聚焦，拍照与文件选择使用各自模式，资料库在底部添加附件', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'camera-library-test' }))
+  localStorage.setItem('SUPERSONIC_USERNAME', 'camera-library-test')
+  const parsed = { id: 'node-1', refDriveId: 'resource-1', title: '备课资料.pdf', fileExt: 'pdf', aiParseState: 2 }
+  vi.mocked(authorizedFetch).mockImplementation(async url => {
+    const path = String(url)
+    if (path === '/res/knowledgeSpace/optionList') return Response.json({ result: [{ id: 'org-1', spaceName: '组织空间' }] })
+    if (path.startsWith('/res/node/tree?')) {
+      const query = new URL(path, 'https://app.test').searchParams
+      return Response.json({ result: query.get('scope') === '1' ? [parsed] : [{ ...parsed, id: 'node-2', refDriveId: 'resource-2', title: '组织资料.pdf' }] })
+    }
+    return Response.json({ success: true, data: {} })
+  })
+  const requests: Array<{ accept: string; capture: string | null; multiple: boolean }> = []
+  const click = vi.spyOn(HTMLInputElement.prototype, 'click').mockImplementation(function (this: HTMLInputElement) {
+    if (this.type === 'file') requests.push({ accept: this.accept, capture: this.getAttribute('capture'), multiple: this.multiple })
+  })
+  try {
+    render(<MemoryRouter initialEntries={['/ai']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+    const nav = within(screen.getByRole('navigation', { name: 'AI 工作区' }))
+    const textbox = screen.getByRole('textbox', { name: '提问输入框' })
+    fireEvent.click(nav.getByRole('button', { name: '技能' }))
+    fireEvent.click(nav.getByRole('button', { name: '任务' }))
+    expect(textbox).toHaveAttribute('placeholder', '发消息或按住说话…')
+    expect(textbox).not.toHaveFocus()
+    expect(requests).toHaveLength(0)
+
+    const plus = screen.getByRole('button', { name: '打开更多操作' })
+    const openAction = (name: string) => {
+      fireEvent.click(plus)
+      fireEvent.click(within(screen.getByRole('dialog', { name: '更多操作' })).getByRole('button', { name }))
+    }
+    openAction('拍照')
+    openAction('选取文件')
+    expect(requests).toEqual([
+      { accept: 'image/*', capture: 'environment', multiple: false },
+      { accept: expect.stringContaining('.pdf'), capture: null, multiple: true },
+    ])
+
+    fireEvent.change(textbox, { target: { value: '原草稿' } })
+    openAction('资料库')
+    const dialog = screen.getByRole('dialog', { name: '选择资料库文件' })
+    const picker = within(dialog)
+    expect(dialog).toHaveAttribute('open')
+    expect(dialog.firstElementChild).toHaveClass('ai-bottom-sheet__panel')
+    expect(picker.getByRole('button', { name: '添加' })).toBeDisabled()
+    await picker.findByText('备课资料.pdf')
+    fireEvent.click(picker.getByRole('tab', { name: '组织' }))
+    const file = await picker.findByRole('button', { name: /组织资料.pdf/ })
+    fireEvent.click(file)
+    expect(file).toHaveAttribute('aria-pressed', 'true')
+    fireEvent.click(picker.getByRole('button', { name: '添加' }))
+    expect(dialog).not.toBeInTheDocument()
+    expect(textbox).toHaveValue('原草稿')
+    expect(screen.getByText('组织资料.pdf')).toBeVisible()
+
+    openAction('资料库')
+    const reopened = within(screen.getByRole('dialog', { name: '选择资料库文件' }))
+    expect(await reopened.findByRole('button', { name: /组织资料.pdf/ })).toBeDisabled()
+    fireEvent.click(reopened.getByRole('button', { name: '取消' }))
+    expect(screen.queryByRole('dialog', { name: '选择资料库文件' })).not.toBeInTheDocument()
+    expect(textbox).toHaveValue('原草稿')
+    expect(vi.mocked(authorizedFetch).mock.calls.some(([, options]) => options?.method === 'POST')).toBe(false)
+  } finally {
+    click.mockRestore()
+    localStorage.removeItem('SUPERSONIC_USERNAME')
+  }
+})
+
+it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、草稿绑定和推荐安装', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'agent-skill-card-test' }))
+  const agentPath = '/api/v1/custom-agents/study-agent'
+  const session = { session_id: 'study', session_name: '学习任务', agent_id: 'study-agent', messages: [] }
+  const agent = {
+    agent_id: 'study-agent', creator_user_id: 'agent-skill-card-test', agent_name: '学习助手', description: '辅助整理资料', agent_prompt: '辅导学习',
+    enabled_skills: [{ skill_name: 'notes', chinese_name: '笔记助手', icon_url: '/notes.png' }], knowledge_spaces: [], preset_questions: [],
+  }
+  const write = vi.fn<(path: string, body?: BodyInit | null) => void>()
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (path.endsWith('/chat/sessions/study')) return Response.json(session)
+    if (path.endsWith('/chat/sessions')) return Response.json({ sessions: [session] })
+    if (path === agentPath && options?.method === 'GET') return Response.json({ data: { agent } })
+    if (path === '/api/v1/users/agent-skill-card-test/skills') return Response.json({ data: {
+      skills: [{ skill_name: 'lesson', chinese_name: '教案助手', icon_url: '/lesson.png' }],
+    } })
+    if (path === '/api/v1/custom-agents/skills/recommend') return Response.json({ data: {
+      skills: [{ skill_name: 'search', chinese_name: '搜索助手', source: 'clawhub', icon_url: '/search.png' }],
+    } })
+    if (options?.method === 'PUT' || options?.method === 'POST') write(path, options.body)
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai?sessionId=study']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  fireEvent.click(await screen.findByRole('button', { name: '打开自定义智能体更多操作' }))
+  fireEvent.click(screen.getByRole('button', { name: '智能体详情' }))
+  fireEvent.click(await within(screen.getByRole('dialog', { name: '智能体详情' })).findByRole('button', { name: '编辑' }))
+  const checkAvatar = (card: HTMLElement, name: string, url: string) => {
+    expect(card).toHaveClass('ai-skill-card')
+    expect(within(card).getByRole('img', { name: `${name}头像` }).querySelector('img')).toHaveAttribute('src', url)
+  }
+  const configured = screen.getByRole('article', { name: '笔记助手' })
+  checkAvatar(configured, '笔记助手', '/notes.png')
+  fireEvent.click(within(configured).getByRole('button', { name: '移除笔记助手' }))
+  expect(configured).not.toBeInTheDocument()
+  const skillsSection = screen.getByText('Skills 服务', { exact: true }).closest('section')!
+  fireEvent.click(within(skillsSection).getByRole('button', { name: '添加' }))
+  const sheet = screen.getByRole('dialog', { name: '选择 Skills 服务' })
+  const draftCard = await within(sheet).findByRole('article', { name: '教案助手' })
+  checkAvatar(draftCard, '教案助手', '/lesson.png')
+  const add = within(draftCard).getByRole('button', { name: '配置技能 教案助手' })
+  fireEvent.click(add)
+  expect(add).toHaveAttribute('aria-pressed', 'true')
+  expect(write).not.toHaveBeenCalled()
+  fireEvent.click(within(sheet).getByRole('button', { name: '技能推荐' }))
+  const recommended = await within(sheet).findByRole('article', { name: '搜索助手' })
+  checkAvatar(recommended, '搜索助手', '/search.png')
+  fireEvent.click(within(recommended).getByRole('button', { name: '添加 ClawHub 技能 搜索助手' }))
+  await within(sheet).findByRole('button', { name: '配置技能 搜索助手', pressed: true })
+  expect(write.mock.calls.map(([path]) => path)).toEqual(['/api/v1/skills/clawhub/search/install'])
+  fireEvent.click(within(sheet).getByRole('button', { name: '关闭选择 Skills 服务' }))
+  checkAvatar(screen.getByRole('article', { name: '教案助手' }), '教案助手', '/lesson.png')
+  checkAvatar(screen.getByRole('article', { name: '搜索助手' }), '搜索助手', '/search.png')
+  fireEvent.click(screen.getByRole('button', { name: '发布' }))
+  await screen.findByText('智能体已更新。')
+  const publish = write.mock.calls.find(([path]) => path === agentPath)
+  expect(JSON.parse(String(publish?.[1])).enabled_skills).toEqual([{ skill_name: 'lesson' }, { skill_name: 'search' }])
 })
 
 it('从任务直接进入三个栏目再返回，保留原消息、草稿和会话地址，不重新加载会话', async () => {

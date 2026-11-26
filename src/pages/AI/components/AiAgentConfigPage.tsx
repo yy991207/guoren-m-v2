@@ -28,15 +28,15 @@ import {
   type RecommendSkillsRequest,
   type SkillSummaryItem,
 } from '../../../services/skills'
-import { getSkillCardTags } from '../utils/skillDisplay'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
 import { AiPublishSettings } from './AiPublishSettings'
 import { AiSelectionSheet } from './AiSelectionSheet'
+import { AiSkillCard } from './AiSkillCard'
 
 type AiAgentConfigTabKey = 'debug' | 'config'
 type AiSkillSheetView = 'added' | 'created' | 'recommended'
 
-export type AiAgentSelectedSkill = Pick<SkillSummaryItem, 'id' | 'skillName' | 'title' | 'description' | 'source' | 'tags'>
+export type AiAgentSelectedSkill = Pick<SkillSummaryItem, 'id' | 'skillName' | 'title' | 'description' | 'iconUrl' | 'source' | 'tags'>
 
 export type AiAgentPresetQuestion = {
   id: string
@@ -178,6 +178,7 @@ function normalizeSelectedSkill(skill: SkillSummaryItem): AiAgentSelectedSkill {
     skillName: skill.skillName,
     title: skill.title,
     description: skill.description,
+    iconUrl: skill.iconUrl,
     source: skill.source,
     tags: skill.tags,
   }
@@ -185,18 +186,6 @@ function normalizeSelectedSkill(skill: SkillSummaryItem): AiAgentSelectedSkill {
 
 function resolveSkillIdentity(skill: Pick<AiAgentSelectedSkill, 'id' | 'skillName'>): string {
   return skill.skillName.trim() || skill.id
-}
-
-function resolveSkillBadge(skill: AiAgentSelectedSkill): string {
-  if (skill.source === 'created') {
-    return '自建'
-  }
-
-  if (skill.source === 'clawhub') {
-    return 'ClawHub'
-  }
-
-  return '已添加'
 }
 
 function buildDebugTimestamp(): string {
@@ -654,51 +643,29 @@ export function AiAgentConfigPage({
   const activeSkillSheetEmptyText = skillSheetView === 'added'
     ? '暂无我添加的技能'
     : '暂无我创建的技能'
-  const renderSkillSheetItems = (
-    items: AiAgentSelectedSkill[],
-    options: {
-      installFromRecommended?: boolean
-    } = {},
-  ) => (
-    <div className="ai-selection-sheet-list">
+  const renderSkillSheetItems = (items: AiAgentSelectedSkill[], installFromRecommended = false) => (
+    <div className="ai-skill-list">
       {items.map((skill) => {
         const checked = isSkillSelected(skill)
-        const isInstalling = Boolean(options.installFromRecommended && recommendedInstallingSkillId === skill.id)
-        const isClawhubSkill = skill.source === 'clawhub'
+        const isInstalling = installFromRecommended && recommendedInstallingSkillId === skill.id
+        const label = installFromRecommended
+          ? `${checked ? '已添加' : isInstalling ? '正在添加' : '添加'} ${skill.source === 'clawhub' ? 'ClawHub ' : ''}技能 ${skill.title}`
+          : `配置技能 ${skill.title}`
 
         return (
-          <button
-            aria-label={options.installFromRecommended && isClawhubSkill ? `${checked ? '已添加' : '添加'} ClawHub 技能 ${skill.title}` : undefined}
-            aria-pressed={options.installFromRecommended ? undefined : checked}
-            className={`ai-selection-sheet-item${checked ? ' is-selected' : ''}`}
-            disabled={Boolean(options.installFromRecommended && (checked || isInstalling))}
+          <AiSkillCard
+            highlighted={checked}
             key={skill.id}
-            type="button"
-            onClick={() => {
-              if (options.installFromRecommended) {
-                void handleAddRecommendedSkill(skill.id)
-                return
-              }
-
-              handleToggleSkill(skill)
+            open={{
+              label,
+              icon: checked ? 'check' : 'add',
+              busy: isInstalling,
+              disabled: installFromRecommended && checked,
+              pressed: installFromRecommended ? undefined : checked,
+              run: () => installFromRecommended ? void handleAddRecommendedSkill(skill.id) : handleToggleSkill(skill),
             }}
-          >
-            <div className="ai-selection-sheet-item-main">
-              <div className="ai-selection-sheet-item-title-row">
-                <span className="ai-selection-sheet-item-title">{skill.title}</span>
-                {isClawhubSkill ? <span className="ai-selection-sheet-item-badge">ClawHub</span> : null}
-              </div>
-              {skill.description ? <div className="ai-selection-sheet-item-desc">{skill.description}</div> : null}
-              {getSkillCardTags(skill).length > 0 ? (
-                <div className="ai-selection-sheet-item-tags">
-                  {getSkillCardTags(skill).map((tag) => (
-                    <span className="ai-selection-sheet-item-tag" key={`${skill.id}-${tag}`}>{tag}</span>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-            <span className="ai-selection-sheet-item-action">{checked ? '已添加' : isInstalling ? '添加中' : '添加'}</span>
-          </button>
+            skill={skill}
+          />
         )
       })}
     </div>
@@ -1102,32 +1069,13 @@ export function AiAgentConfigPage({
         {selectedSkills.length === 0 ? (
           <div className="ai-agent-config-empty">暂未添加 Skills 服务</div>
         ) : (
-          <div className="ai-agent-skill-list">
+          <div className="ai-skill-list">
             {selectedSkills.map((skill) => (
-              <article className="ai-agent-skill-card" key={skill.id}>
-                <div className="ai-agent-skill-card-top">
-                  <div className="ai-agent-skill-card-title-row">
-                    <span className="ai-agent-skill-card-title">{skill.title}</span>
-                    <span className="ai-agent-skill-card-badge">{resolveSkillBadge(skill)}</span>
-                  </div>
-                  <button
-                    aria-label={`移除${skill.title}`}
-                    className="ai-agent-config-remove-btn"
-                    type="button"
-                    onClick={() => removeSelectedSkillByIdentity(skill)}
-                  >
-                    移除
-                  </button>
-                </div>
-                <div className="ai-agent-skill-card-desc">{skill.description || '暂无描述'}</div>
-                {skill.tags.length > 0 ? (
-                  <div className="ai-agent-skill-card-tags">
-                    {skill.tags.slice(0, 3).map((tag) => (
-                      <span className="ai-agent-skill-card-tag" key={`${skill.id}-${tag}`}>{tag}</span>
-                    ))}
-                  </div>
-                ) : null}
-              </article>
+              <AiSkillCard
+                key={skill.id}
+                management={{ icon: 'remove', label: `移除${skill.title}`, run: () => removeSelectedSkillByIdentity(skill) }}
+                skill={skill}
+              />
             ))}
           </div>
         )}
@@ -1372,7 +1320,7 @@ export function AiAgentConfigPage({
                 <div className="ai-selection-sheet-status">暂无推荐技能</div>
               ) : null}
               {!recommendedSkillsLoading && !recommendedSkillsError && recommendedSkillOptions.length > 0
-                ? renderSkillSheetItems(recommendedSkillOptions, { installFromRecommended: true })
+                ? renderSkillSheetItems(recommendedSkillOptions, true)
                 : null}
             </>
           ) : (

@@ -45,16 +45,21 @@ export function AiSkillsPage({
       <div className="ai-skill-list">
         {list.items.map(skill => {
           const selected = managed || skill.isSelected
+          const adding = addingNames.has(skill.skillName || skill.id)
+          const removing = managed && removingId === skill.id
           return (
             <AiSkillCard
-              adding={addingNames.has(skill.skillName || skill.id)}
+              action={{
+                label: `${selected ? '使用技能' : adding ? '正在添加技能' : '添加技能'} ${skill.title}`,
+                icon: selected ? 'use' : 'add',
+                disabled: removing,
+                busy: adding,
+                run: () => selected ? onUse(skill) : onAdd({ ...skill, source: key }),
+              }}
               key={skill.id}
-              management={managed ? { label: key === 'added' ? '移除技能' : '删除技能', run: () => onDelete(skill) } : undefined}
-              removing={managed && removingId === skill.id}
-              selected={selected}
+              management={managed ? { icon: 'remove', label: key === 'added' ? '移除技能' : '删除技能', busy: removing, run: () => onDelete(skill) } : undefined}
+              open={{ label: `查看技能详情 ${skill.title}`, run: () => onOpenDetail(skill, key) }}
               skill={skill}
-              onAction={() => selected ? onUse(skill) : onAdd({ ...skill, source: key })}
-              onOpen={() => onOpenDetail(skill, key)}
             />
           )
         })}

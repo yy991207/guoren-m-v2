@@ -3,9 +3,7 @@
   --ai-composer-text-muted: #626568;
   --ai-composer-surface: #fff;
   --ai-composer-pressed: #f0f1f1;
-  --ai-composer-accent: #087e68;
-  --ai-composer-recording: #06bf9a;
-  --ai-composer-pending: #e0f5ef;
+  --ai-composer-pending: color-mix(in srgb, var(--ai-accent-color) 12%, white);
   --ai-composer-cancel: #a3263c;
   --ai-composer-cancel-tint: #ffe3e8;
   display: flex;
@@ -74,11 +72,12 @@
 
 .ai-workspace-composer-row:is([data-stage='requesting'], [data-stage='finishing']) {
   background: var(--ai-composer-pending);
-  color: var(--ai-composer-accent);
+  color: var(--ai-accent-color);
 }
 
 .ai-workspace-composer-row[data-stage='recording'] {
-  background: var(--ai-composer-recording);
+  background: var(--ai-accent-color);
+  color: #fff;
 }
 
 .ai-workspace-composer-row[data-stage='canceling'] {
@@ -228,6 +227,13 @@
   overflow-y: auto;
 }
 
+/* 收起态只有一行，避免长提示换行时闪出竖向滚动条。 */
+.ai-workspace-composer-row[data-expanded='false'] .adm-text-area-element {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .ai-workspace-composer-model:focus-visible {
   outline: 2px solid currentColor;
   outline-offset: 1px;
@@ -235,7 +241,7 @@
 
 .ai-workspace-composer-icon:focus-visible,
 .ai-workspace-composer-hold:focus-visible {
-  outline: 2px solid var(--ai-composer-accent);
+  outline: 2px solid var(--ai-accent-color);
   outline-offset: 1px;
 }
 
@@ -300,7 +306,7 @@
   gap: 3px;
   width: min(100%, 200px);
   height: 28px;
-  color: var(--ai-composer-recording);
+  color: var(--ai-accent-color);
 }
 
 .ai-workspace-composer-wave > span {

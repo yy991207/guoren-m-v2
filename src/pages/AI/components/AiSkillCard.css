@@ -16,6 +16,11 @@
   background: #fff;
 }
 
+.ai-skill-card[data-highlighted='true'] {
+  border-color: color-mix(in srgb, var(--ai-accent-color) 32%, white);
+  background: color-mix(in srgb, var(--ai-accent-color) 5%, white);
+}
+
 .ai-skill-card-main {
   display: flex;
   flex: 1 1 0;
@@ -34,7 +39,8 @@
   cursor: pointer;
 }
 
-.ai-skill-card-open:active { background: rgb(25 28 34 / 4%); }
+.ai-skill-card-open:not(:disabled):active { background: rgb(25 28 34 / 4%); }
+.ai-skill-card-open:disabled { cursor: default; }
 
 .ai-skill-card-avatar {
   display: grid;
@@ -89,6 +95,8 @@
   cursor: pointer;
 }
 
+.ai-skill-card-indicator { pointer-events: none; }
+.ai-skill-card[data-highlighted='true'] .ai-skill-card-indicator { color: var(--ai-accent-color); }
 .ai-skill-card-action.is-management { background: transparent; color: #656d78; }
 .ai-skill-card-action:not(:disabled):active { background: #e6e9ed; }
 .ai-skill-card-action:disabled { cursor: default; }

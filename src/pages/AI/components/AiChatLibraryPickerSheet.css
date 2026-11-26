@@ -1,0 +1,86 @@
+.ai-library-picker-sheet {
+  --ai-bottom-sheet-max-height: min(76dvh, 36rem);
+  --ai-bottom-sheet-height: var(--ai-bottom-sheet-height-limit);
+  --ai-bottom-sheet-padding-inline: 16px;
+  --ai-bottom-sheet-padding-bottom: 14px;
+  --ai-bottom-sheet-handle-gap: 10px;
+  overflow: clip;
+}
+
+.ai-library-picker-header {
+  flex: none;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e8ebef;
+}
+
+.ai-library-picker-header h2 {
+  margin: 0;
+  color: #1f2329;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.ai-library-picker-header .library-scope-switch { margin-top: 4px; }
+.ai-library-picker-header .library-scope-btn { font-size: 15px; }
+
+.ai-library-picker-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ai-library-picker-item.is-disabled { opacity: 0.58; cursor: not-allowed; }
+.ai-library-picker-item :is(.library-item-name, .library-item-meta) { display: block; }
+
+.ai-library-picker-item .library-item-side-text {
+  max-width: 36%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-library-picker-checkbox {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.ai-library-picker-checkbox.is-checked {
+  border-color: var(--ai-accent-color);
+  background: var(--ai-accent-color);
+}
+
+.ai-library-picker-footer {
+  display: flex;
+  flex: none;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e8ebef;
+}
+
+.ai-library-picker-footer-btn {
+  flex: 1;
+  min-height: 44px;
+  border: 1px solid #d9dde3;
+  border-radius: 12px;
+  background: #fff;
+  color: #333;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-library-picker-footer-btn.is-primary {
+  border-color: var(--ai-accent-color);
+  background: var(--ai-accent-color);
+  color: #fff;
+}
+
+.ai-library-picker-footer-btn:disabled { opacity: 0.45; cursor: default; }
+.ai-library-picker-sheet button:focus-visible { outline: 2px solid var(--ai-accent-color); outline-offset: -2px; }
+.ai-library-picker-footer-btn.is-primary:focus-visible { outline-color: #fff; }

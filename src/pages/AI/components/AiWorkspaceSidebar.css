@@ -1,6 +1,7 @@
 .ai-workspace-frame {
   --ai-sidebar-width: 82%;
   --ai-workspace-background: #f5f6f8;
+  --ai-accent-color: #1f4fcc;
   position: relative;
   display: flex;
   flex: 1 1 0;

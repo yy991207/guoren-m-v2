@@ -14,7 +14,3 @@ export function filterSkillItems(items: SkillSummaryItem[], keyword: string): Sk
     || item.tags.some((tag) => tag.toLowerCase().includes(normalizedKeyword))
   ))
 }
-
-export function getSkillCardTags(skill: Pick<SkillSummaryItem, 'tags'>): string[] {
-  return skill.tags.slice(0, 3)
-}

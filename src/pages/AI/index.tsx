@@ -40,11 +40,12 @@ import {
   deleteCreatedSkill,
   fetchAddedSkills,
   fetchCreatedSkills,
-  fetchUserSkills,
+  fetchUserSkillGroups,
   installClawhubSkill,
   removeAddedSkill,
   type SkillSource,
   type SkillSummaryItem,
+  type UserSkillGroups,
 } from '../../services/skills'
 import { viewCustomAgent, type CustomAgentDetail } from '../../services/customAgents'
 import { AiConversationThread } from './components/AiConversationThread'
@@ -71,6 +72,7 @@ import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
 import { AiDraftAttachments } from './components/AiDraftAttachments'
 import { AiScrollScope } from './components/scrollbars/AiScrollScope'
+import { AiChatLibraryPickerSheet } from './components/AiChatLibraryPickerSheet'
 import { AiChatSkillPickerSheet } from './components/AiChatSkillPickerSheet'
 import { AiBottomSheet } from './components/AiBottomSheet'
 import { AiWorkspaceNavigation, type AiWorkspaceTab } from './components/AiWorkspaceNavigation'
@@ -97,11 +99,12 @@ import { getChatAttachmentFileType, getChatAttachmentPreviewUrl, isChatAttachmen
 import AppComposerInput from '../../components/AppComposerInput'
 import DisplayName from '../../components/DisplayName'
 import { APP_ROUTE_PATHS } from '../../routes'
-import LibraryScopeTabs, { type LibraryScopeTabKey } from '../Library/components/LibraryScopeTabs'
-import '../Library/index.css'
+import type { LibraryScopeTabKey } from '../Library/components/LibraryScopeTabs'
 import './index.css'
 
 const AUTO_SCROLL_RESUME_THRESHOLD = 48
+const EMPTY_USER_SKILL_GROUPS: UserSkillGroups = { added: [], created: [] }
+type LocalFilePickerMode = 'all' | 'image' | 'camera'
 
 const EMPTY_COMMANDS_DATA: CommandsData = {
   official_commands: [],
@@ -162,6 +165,7 @@ function buildConfigDraftFromCustomAgentDetail(detail: CustomAgentDetail): AiAge
       skillName: skill.skill_name,
       title: skill.chinese_name?.trim() || skill.skill_name,
       description: skill.description?.trim() || '',
+      iconUrl: skill.icon_url || undefined,
       source: 'added',
       tags: [],
     })),
@@ -194,6 +198,7 @@ function buildDetailFromConfigDraft(
       skill_name: skill.skillName,
       chinese_name: skill.title,
       description: skill.description,
+      icon_url: skill.iconUrl,
       source: skill.source,
     })),
     knowledge_spaces: draft.knowledgeSpaces.map((space) => ({
@@ -215,70 +220,6 @@ function buildDetailFromConfigDraft(
     created_at: detail?.created_at ?? '',
     updated_at: new Date().toISOString(),
   }
-}
-
-function formatLibraryPickerDateTime(value: string): string {
-  if (!value) {
-    return '-'
-  }
-
-  const date = new Date(value)
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  return new Intl.DateTimeFormat('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  })
-    .format(date)
-    .replace(/\//g, '-')
-}
-
-function resolveLibraryPickerBadge(file: LibraryResourceFile): { bg: string; label: string } {
-  const normalizedExt = file.fileExt.toLowerCase() || file.fileName.split('.').pop()?.toLowerCase() || ''
-
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp', 'svg'].includes(normalizedExt)) {
-    return { bg: '#FF8A34', label: 'IMG' }
-  }
-
-  if (['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv', 'm4v'].includes(normalizedExt)) {
-    return { bg: '#8D5BFF', label: 'VID' }
-  }
-
-  if (['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg'].includes(normalizedExt)) {
-    return { bg: '#25B864', label: 'AUD' }
-  }
-
-  if (['ppt', 'pptx', 'key'].includes(normalizedExt)) {
-    return { bg: '#FF8A34', label: 'PPT' }
-  }
-
-  if (normalizedExt === 'pdf') {
-    return { bg: '#4A7CFF', label: 'PDF' }
-  }
-
-  if (normalizedExt === 'html' || normalizedExt === 'htm') {
-    return { bg: '#8c8f96', label: 'HTML' }
-  }
-
-  return { bg: '#4A7CFF', label: 'DOC' }
-}
-
-function renderLibraryPickerFileBadge(file: LibraryResourceFile) {
-  const { bg, label } = resolveLibraryPickerBadge(file)
-
-  return (
-    <div className="library-file-icon" style={{ background: bg }}>
-      {label}
-    </div>
-  )
 }
 
 function getDisplayName(): string {
@@ -379,7 +320,7 @@ export default function AIPage({
   const showSkillsPage = workspaceTab === 'skills'
   const [showSkillSelectorSheet, setShowSkillSelectorSheet] = useState(false)
   const [showFileMenu, setShowFileMenu] = useState(false)
-  const [showLibraryPage, setShowLibraryPage] = useState(false)
+  const [showLibraryPickerSheet, setShowLibraryPickerSheet] = useState(false)
   const [showCustomAgentConversationPage, setShowCustomAgentConversationPage] = useState(false)
   const [showAgentConfigPage, setShowAgentConfigPage] = useState(false)
   const [showCreateAgentModal, setShowCreateAgentModal] = useState(false)
@@ -412,7 +353,7 @@ export default function AIPage({
   const [createdSkills, setCreatedSkills] = useState<SkillSummaryItem[]>([])
   const [mySkillsLoading, setMySkillsLoading] = useState(false)
   const [mySkillsError, setMySkillsError] = useState('')
-  const [userSkills, setUserSkills] = useState<SkillSummaryItem[]>([])
+  const [userSkills, setUserSkills] = useState<UserSkillGroups>(EMPTY_USER_SKILL_GROUPS)
   const [userSkillsLoading, setUserSkillsLoading] = useState(false)
   const [userSkillsError, setUserSkillsError] = useState('')
   const { visibleAgents, setVisibleAgents, discoverLoading, discoverError, refreshVisibleAgents,
@@ -424,7 +365,7 @@ export default function AIPage({
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [libraryError, setLibraryError] = useState('')
   const [localBannerMessage, setLocalBannerMessage] = useState('')
-  const [filePickerMode, setFilePickerMode] = useState<'all' | 'image'>('all')
+  const [filePickerMode, setFilePickerMode] = useState<LocalFilePickerMode>('all')
   const [draftImageFiles, setDraftImageFiles] = useState<ReadonlyMap<string, File>>(() => new Map())
   const [showPartnerSettings, setShowPartnerSettings] = useState(false)
   const [partnerConfig, setPartnerConfig] = useState<PartnerConfig | null>(null)
@@ -569,11 +510,10 @@ export default function AIPage({
     Boolean(currentConversationCustomAgentDetail && currentConversationCustomAgentDetail.creator_user_id === currentUserId)
   ), [currentConversationCustomAgentDetail, currentUserId])
   const isFeatureActive = workspaceTab !== 'task'
-  const composerSheetOpen = showPlusSheet || showSkillSelectorSheet
+  const composerSheetOpen = showPlusSheet || showSkillSelectorSheet || showLibraryPickerSheet
   const isAiMainPageVisible = !showDrawer
     && !isFeatureActive
     && !showCustomAgentConversationPage
-    && !showLibraryPage
     && !showAgentConfigPage
     && !showCreateAgentModal
     && !showCommandsPage
@@ -632,13 +572,24 @@ export default function AIPage({
     setShowSkillSelectorSheet(true)
   }
 
-  const openLibraryPage = () => {
+  const openLibraryPickerSheet = () => {
     setShowPlusSheet(false)
     setShowFileMenu(false)
     setSelectedLibraryIds([])
+    setLibraryFiles([])
+    setLibraryError('')
+    setLibraryLoading(libraryTab === 'personal' || Boolean(selectedOrgSpaceId))
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
-    setShowLibraryPage(true)
+    setShowLibraryPickerSheet(true)
+  }
+
+  const changeLibraryScope = (scope: LibraryScopeTabKey) => {
+    if (scope === libraryTab) return
+    setLibraryFiles([])
+    setLibraryError('')
+    setLibraryLoading(scope === 'personal' || Boolean(selectedOrgSpaceId))
+    setLibraryTab(scope)
   }
 
   const navigateWorkspace = (next: AiWorkspaceTab) => {
@@ -659,7 +610,7 @@ export default function AIPage({
     setSelectedSkillDetail(null)
     setShowCustomAgentConversationPage(false)
     setShowSkillSelectorSheet(false)
-    setShowLibraryPage(false)
+    setShowLibraryPickerSheet(false)
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
   }
@@ -816,8 +767,8 @@ export default function AIPage({
     startNewChat,
   ])
 
-  const openLocalFilePicker = (mode: 'all' | 'image') => {
-    // 文件选择器在点击时读取 accept，要先让浏览器看到本次的图片/文件过滤条件。
+  const openLocalFilePicker = (mode: LocalFilePickerMode) => {
+    // 在同一个点击事件里同步切换图片过滤与拍照属性，保留浏览器要求的用户手势。
     flushSync(() => {
       setShowFileMenu(false)
       setShowPlusSheet(false)
@@ -1021,9 +972,10 @@ export default function AIPage({
     added: filterSkillItems(addedSkills, mySkillSearchValue),
     created: filterSkillItems(createdSkills, mySkillSearchValue),
   }), [addedSkills, createdSkills, mySkillSearchValue])
-  const visibleSelectableSkills = useMemo(() => {
-    return filterSkillItems(userSkills, skillSelectorSearchValue)
-  }, [skillSelectorSearchValue, userSkills])
+  const visibleSelectableSkills = useMemo(() => ({
+    added: filterSkillItems(userSkills.added, skillSelectorSearchValue),
+    created: filterSkillItems(userSkills.created, skillSelectorSearchValue),
+  }), [skillSelectorSearchValue, userSkills])
   const discoverSections = useMemo<Array<{
     key: AgentCategoryKey
     title: string
@@ -1035,7 +987,6 @@ export default function AIPage({
     { key: 'collaboration', title: '共创', items: groupedDiscoverAgents.collaboration },
     { key: 'mine', title: '我的智能体', items: groupedDiscoverAgents.mine },
   ]), [groupedDiscoverAgents])
-  const visibleLibraryItems = libraryFiles
   const draftResourceIds = useMemo(() => new Set(
     draftAttachments.flatMap((attachment) => attachment.resourceId ? [attachment.resourceId] : []),
   ), [draftAttachments])
@@ -1269,12 +1220,12 @@ export default function AIPage({
 
     void (async () => {
       try {
-        const skills = await fetchUserSkills(controller.signal)
+        const skills = await fetchUserSkillGroups(controller.signal)
         // 关闭后再打开会重新加载，取消的旧请求不应覆盖新列表。
         if (!controller.signal.aborted) setUserSkills(skills)
       } catch (error) {
         if (!controller.signal.aborted) {
-          setUserSkills([])
+          setUserSkills(EMPTY_USER_SKILL_GROUPS)
           setUserSkillsError(error instanceof Error ? error.message : '技能列表加载失败')
         }
       } finally {
@@ -1290,7 +1241,7 @@ export default function AIPage({
   }, [showSkillSelectorSheet])
 
   useEffect(() => {
-    if (!showLibraryPage) {
+    if (!showLibraryPickerSheet) {
       return
     }
 
@@ -1300,7 +1251,7 @@ export default function AIPage({
       try {
         const nextSpaces = await fetchKnowledgeSpaces(controller.signal)
 
-        if (!selectedOrgSpaceId && nextSpaces.length > 0) {
+        if (!controller.signal.aborted && !selectedOrgSpaceId && nextSpaces.length > 0) {
           setSelectedOrgSpaceId(nextSpaces[0].id)
         }
       } catch (error) {
@@ -1313,10 +1264,10 @@ export default function AIPage({
     return () => {
       controller.abort()
     }
-  }, [selectedOrgSpaceId, showLibraryPage])
+  }, [selectedOrgSpaceId, showLibraryPickerSheet])
 
   useEffect(() => {
-    if (!showLibraryPage) {
+    if (!showLibraryPickerSheet) {
       return
     }
 
@@ -1337,8 +1288,11 @@ export default function AIPage({
           signal: controller.signal,
         })
 
-        setLibraryFiles(nextFiles)
-        setSelectedLibraryIds((current) => current.filter((itemId) => nextFiles.some((file) => file.nodeId === itemId)))
+        // 切换范围或关掉弹窗后，旧请求不能覆盖新列表与选中项。
+        if (!controller.signal.aborted) {
+          setLibraryFiles(nextFiles)
+          setSelectedLibraryIds((current) => current.filter((itemId) => nextFiles.some((file) => file.nodeId === itemId)))
+        }
       } catch (error) {
         if (!controller.signal.aborted) {
           setLibraryError(error instanceof Error ? error.message : '资料库文件加载失败')
@@ -1353,7 +1307,7 @@ export default function AIPage({
     return () => {
       controller.abort()
     }
-  }, [libraryTab, selectedOrgSpaceId, showLibraryPage])
+  }, [libraryTab, selectedOrgSpaceId, showLibraryPickerSheet])
 
   const applyFeatureCard = (card: CommandPromptItem) => {
     setVoiceMode(false)
@@ -1435,7 +1389,7 @@ export default function AIPage({
 
     setSkillSelected(resolvedSkillName, true)
     setAddedSkills(applySelection)
-    setUserSkills(applySelection)
+    setUserSkills(current => ({ added: applySelection(current.added), created: applySelection(current.created) }))
     setSelectedSkillDetail((current) => {
       if (!current) {
         return current
@@ -1689,7 +1643,7 @@ export default function AIPage({
   }
 
   const addSelectedLibraryItemsToDraft = () => {
-    const nextAttachments: ChatAttachment[] = visibleLibraryItems
+    const nextAttachments: ChatAttachment[] = libraryFiles
       .filter((item) => selectedLibraryIds.includes(item.nodeId))
       .map((item) => ({
         id: `library-${item.nodeId}`,
@@ -1707,7 +1661,7 @@ export default function AIPage({
     }
 
     setSelectedLibraryIds([])
-    setShowLibraryPage(false)
+    setShowLibraryPickerSheet(false)
   }
 
   const toggleLibraryItem = (id: string) => {
@@ -1980,7 +1934,7 @@ export default function AIPage({
             isResponding={isResponding}
             isStopping={isStopping}
             note="AI 生成内容可能有误，请核实重要信息"
-            placeholder="提个问题，或让我创作、分析任意内容"
+            placeholder="发消息或按住说话…"
             plusExpanded={composerSheetOpen}
             sessionKey={routeSessionId}
             textExpanded={textComposerExpanded}
@@ -1999,8 +1953,9 @@ export default function AIPage({
         )}
         <input
           accept={fileInputAccept}
+          capture={filePickerMode === 'camera' ? 'environment' : undefined}
           className="ai-hidden-file-input"
-          multiple
+          multiple={filePickerMode !== 'camera'}
           onChange={handleLocalFileChange}
           ref={fileInputRef}
           type="file"
@@ -2193,10 +2148,10 @@ export default function AIPage({
         <AiWorkspacePlusSheet
           webSearchEnabled={webSearchEnabled}
           onClose={closePlusSheet}
-          onOpenLibrary={openLibraryPage}
+          onOpenLibrary={openLibraryPickerSheet}
           onOpenSkills={openSkillSelectorSheet}
           onPickFile={() => openLocalFilePicker('all')}
-          onPickPhoto={() => openLocalFilePicker('image')}
+          onTakePhoto={() => openLocalFilePicker('camera')}
           onWebSearchChange={setWebSearchEnabled}
         />
       )}
@@ -2234,7 +2189,7 @@ export default function AIPage({
                 onClick={
                   item.key === 'file'
                     ? () => setShowFileMenu((value) => !value)
-                    : openLibraryPage
+                    : openLibraryPickerSheet
                 }
               >
                 <span className="ai-plus-sheet-card-icon">
@@ -2329,74 +2284,19 @@ export default function AIPage({
       )}
 
 
-      {showLibraryPage && (
-        <div className="library-page ai-library-picker-page">
-          <div className="library-header ai-library-picker-header">
-            <LibraryScopeTabs activeScope={libraryTab} onScopeChange={setLibraryTab} />
-          </div>
-
-          <div className="library-content ai-library-picker-content">
-            <div className="library-list">
-              {libraryLoading ? <AiLoading message="资料库加载中…" variant="page" /> : null}
-              {!libraryLoading && libraryError ? <div className="library-empty">{libraryError}</div> : null}
-              {!libraryLoading && !libraryError && visibleLibraryItems.length === 0 ? (
-                <div className="library-empty">
-                  <div className="library-empty-title">暂无可引用文件</div>
-                </div>
-              ) : null}
-              {!libraryLoading && !libraryError && visibleLibraryItems.map((item) => {
-                const checked = selectedLibraryIds.includes(item.nodeId)
-                const isAlreadyAttached = draftResourceIds.has(item.resourceId)
-                const metaText = isAlreadyAttached ? '已添加到当前会话' : item.createBy || '未知来源'
-
-                return (
-                  <button
-                    className={`library-item ai-library-picker-item ${checked ? 'is-selected' : ''} ${isAlreadyAttached ? 'is-disabled' : ''}`}
-                    disabled={isAlreadyAttached}
-                    key={item.nodeId}
-                    type="button"
-                    onClick={() => {
-                      if (!isAlreadyAttached) {
-                        toggleLibraryItem(item.nodeId)
-                      }
-                    }}
-                  >
-                    <span className={`ai-library-picker-checkbox ${checked ? 'is-checked' : ''}`}>
-                      {checked && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
-                    </span>
-                    <div className="library-item-main">
-                      {renderLibraryPickerFileBadge(item)}
-                      <div className="library-item-body">
-                        <div className="library-item-name">{item.fileName}</div>
-                        <div className="library-item-meta">{metaText}</div>
-                      </div>
-                    </div>
-                    <div className="library-item-side">
-                      <span className="library-item-side-text">{formatLibraryPickerDateTime(item.createTime)}</span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-
-          <div className="ai-library-picker-footer">
-            <button className="ai-library-picker-footer-btn" type="button" onClick={() => setShowLibraryPage(false)}>取消</button>
-            <button
-              className="ai-library-picker-footer-btn is-primary"
-              disabled={selectedLibraryIds.length === 0}
-              type="button"
-              onClick={addSelectedLibraryItemsToDraft}
-            >
-              添加
-            </button>
-          </div>
-
-        </div>
+      {showLibraryPickerSheet && (
+        <AiChatLibraryPickerSheet
+          attachedResourceIds={draftResourceIds}
+          error={libraryError}
+          items={libraryFiles}
+          loading={libraryLoading}
+          scope={libraryTab}
+          selectedIds={selectedLibraryIds}
+          onClose={() => setShowLibraryPickerSheet(false)}
+          onConfirm={addSelectedLibraryItemsToDraft}
+          onScopeChange={changeLibraryScope}
+          onToggle={toggleLibraryItem}
+        />
       )}
 
       {showCustomAgentConversationPage && (

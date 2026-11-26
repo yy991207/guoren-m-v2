@@ -61,9 +61,7 @@ export type RecommendSkillsRequest = {
   agent_prompt?: string | null
 }
 
-function buildSkillMergeKey(skill: Pick<SkillSummaryItem, 'id' | 'skillName'>): string {
-  return skill.skillName.trim() || skill.id
-}
+export type UserSkillGroups = Record<'added' | 'created', SkillSummaryItem[]>
 
 type SkillListResponse = {
   success?: boolean
@@ -374,20 +372,6 @@ export function buildSkillInitialPrompt(skill: Pick<SkillSummaryItem, 'skillName
   return skill.title.trim()
 }
 
-export function mergeSkillSummaryItems(...lists: SkillSummaryItem[][]): SkillSummaryItem[] {
-  const record = new Map<string, SkillSummaryItem>()
-
-  lists.flat().forEach((item) => {
-    const key = buildSkillMergeKey(item)
-
-    if (!record.has(key)) {
-      record.set(key, item)
-    }
-  })
-
-  return [...record.values()]
-}
-
 export async function fetchOfficialSkills(signal?: AbortSignal): Promise<SkillSummaryItem[]> {
   const userId = getRequiredUserId()
   return requestSkillList(buildAiApiUrl(SKILLS_PATH, { user_id: userId }), 'official', signal)
@@ -436,9 +420,10 @@ export async function fetchCreatedSkills(signal?: AbortSignal): Promise<SkillSum
   }), 'created', signal)
 }
 
-export async function fetchUserSkills(signal?: AbortSignal): Promise<SkillSummaryItem[]> {
-  const [addedSkills, createdSkills] = await Promise.all([fetchAddedSkills(signal), fetchCreatedSkills(signal)])
-  return mergeSkillSummaryItems(addedSkills, createdSkills)
+export async function fetchUserSkillGroups(signal?: AbortSignal): Promise<UserSkillGroups> {
+  const [added, created] = await Promise.all([fetchAddedSkills(signal), fetchCreatedSkills(signal)])
+  // 以返回它的接口划分「添加」和「创建」，不能用技能自身的发布来源来分组。
+  return { added, created }
 }
 
 export async function fetchClawhubSkills(
