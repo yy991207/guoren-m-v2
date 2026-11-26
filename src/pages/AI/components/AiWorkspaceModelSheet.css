@@ -7,6 +7,10 @@
   color: #202124;
 }
 
+.ai-workspace-model-sheet:has(> .ai-loading[data-fill]) {
+  --ai-bottom-sheet-min-height: min(42dvh, 18rem);
+}
+
 .ai-workspace-model-sheet__header,
 .ai-workspace-model-sheet__option {
   display: grid;

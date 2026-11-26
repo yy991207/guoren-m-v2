@@ -5,8 +5,8 @@ import { AiAgentConversationPreview } from './AiAgentConversationPreview'
 it('基础信息的确定按钮提示发布后保存，确认只提交草稿数据并关闭弹窗', () => {
   const onProfileSave = vi.fn()
   render(<AiAgentConversationPreview
-    agentName="原名" description="原简介" inputValue="" questions={[]}
-    onInputChange={vi.fn()} onSuggestionClick={vi.fn()} onProfileSave={onProfileSave}
+    agentName="原名" description="原简介" composer={null} questions={[]}
+    onSuggestionClick={vi.fn()} onProfileSave={onProfileSave}
   />)
   fireEvent.click(screen.getByRole('button', { name: '编辑智能体基础信息' }))
   const dialog = within(screen.getByRole('dialog', { name: '编辑基本信息' }))

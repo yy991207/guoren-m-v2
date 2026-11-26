@@ -186,7 +186,7 @@ export function AiOrgMemberPicker({
 
       <div className="ai-org-member-picker-list">
         {contactLoading ? (
-          <AiLoading message="组织成员加载中…" />
+          <AiLoading fill message="组织成员加载中…" />
         ) : contactError ? (
           <div className="ai-org-member-picker-status is-error">{contactError}</div>
         ) : (

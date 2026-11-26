@@ -5,8 +5,8 @@ import { AiCustomAgentConversationPage } from './AiCustomAgentConversationPage'
 const agentName = '特别长的学习计划与课程设计智能体名称'
 const avatarUrl = '/avatars/agent.png'
 const props = {
-  agentName, avatarUrl, description: '', inputValue: '', questions: [],
-  onBack: vi.fn(), onInputChange: vi.fn(), onSuggestionClick: vi.fn(),
+  agentName, avatarUrl, description: '', composer: null, questions: [],
+  onBack: vi.fn(), onSuggestionClick: vi.fn(),
 }
 
 it('没有会话名时单行显示头像和智能体名，有会话名后将两者放到第二行', () => {

@@ -176,7 +176,7 @@ export function AiPublishSettings({
         {isPublishingToCommunity ? (
           <div className="ai-publish-settings-community-panel">
             {communityLoading ? (
-              <AiLoading message="研习社分类加载中…" />
+              <AiLoading fill message="研习社分类加载中…" />
             ) : communityError ? (
               <div className="ai-publish-settings-status is-error">{communityError}</div>
             ) : (

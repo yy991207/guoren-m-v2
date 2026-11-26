@@ -35,7 +35,7 @@ export default function AiCommandsPage({
   const itemsByTab = { 'best-practice': bestPractices, 'recommended-prompts': officialCommands, 'my-prompts': myCommands }
 
   const renderCommands = (tab: (typeof COMMAND_TABS)[number]) => {
-    if (loading) return <AiLoading message="内容加载中…" variant="page" />
+    if (loading) return <AiLoading fill message="内容加载中…" variant="page" />
     if (error) return <div className="ai-data-status" role="alert">{error}</div>
 
     const keyword = search.trim().toLowerCase()

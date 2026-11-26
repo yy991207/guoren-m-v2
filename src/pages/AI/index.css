@@ -1172,6 +1172,12 @@
   font-weight: 500;
 }
 
+.ai-drawer-section:has(> .ai-loading[data-fill]) {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
+}
+
 .ai-drawer-section {
   margin-top: 18px;
 }
@@ -1727,6 +1733,8 @@
   gap: 8px;
 }
 
+.ai-create-agent-modal-templates > .ai-loading[data-fill] { min-block-size: 76px; }
+
 .ai-create-agent-modal-templates-state {
   grid-column: 1 / -1;
   min-height: 44px;
@@ -2193,6 +2201,7 @@
 
 .ai-agent-chat-preview-content .ai-chat-thread {
   width: 100%;
+  padding-bottom: 16px;
 }
 
 .ai-agent-chat-preview-thread {
@@ -2310,13 +2319,10 @@
 }
 
 .ai-agent-chat-preview-bottom {
-  background: linear-gradient(180deg, rgba(246, 247, 251, 0) 0%, rgba(246, 247, 251, 0.58) 18%, rgba(246, 247, 251, 0.84) 42%, rgba(246, 247, 251, 0.96) 100%);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.ai-agent-chat-preview-composer {
-  background: transparent;
+  flex: 0 0 auto;
+  max-height: 55%;
+  overflow-y: auto;
+  padding: 6px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
 }
 
 .ai-custom-agent-detail-sheet {
@@ -3254,6 +3260,10 @@
   padding: 12px;
 }
 
+.ai-org-member-picker-list:has(> .ai-loading[data-fill]) {
+  min-block-size: min(248px, 42dvh);
+}
+
 .ai-org-member-picker-section {
   display: flex;
   flex-direction: column;
@@ -3445,6 +3455,12 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.ai-selection-sheet-section:has(> .ai-loading[data-fill]) {
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100%;
 }
 
 .ai-selection-sheet-section + .ai-selection-sheet-section {

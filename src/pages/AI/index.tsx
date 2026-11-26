@@ -1517,11 +1517,13 @@ export default function AIPage({
       }
 
       try {
-        await ensureAgentUsageLog(detail.agent_id)
+        await ensureAgentUsageLog(detail.agent_id, controller.signal)
       } catch (error) {
-        console.warn('[ai-page] 补写智能体使用记录失败：', error)
+        if (!controller.signal.aborted) console.warn('[ai-page] 补写智能体使用记录失败：', error)
       }
 
+      // 关闭加载中的智能体后，不再切换会话或覆盖正在使用的输入框。
+      if (controller.signal.aborted) return
       setCustomAgentConversationDetail(detail)
       activateAgent(buildAgentContextFromDetail(detail))
       startNewChat({ keepAgent: true })
@@ -1547,6 +1549,8 @@ export default function AIPage({
     customAgentConversationAbortRef.current?.abort()
     setShowCustomAgentConversationPage(false)
     setShowPlusSheet(false)
+    setShowSkillSelectorSheet(false)
+    setShowLibraryPickerSheet(false)
     setShowFileMenu(false)
     setCustomAgentConversationDetail(null)
     setCustomAgentConversationError('')
@@ -1691,6 +1695,39 @@ export default function AIPage({
     }
   }
 
+  // 正式智能体对话和任务共用会话输入能力，联网权限仍由各自场景决定。
+  const renderChatComposer = (inAgent: boolean) => (
+    <AiWorkspaceComposer
+      active={inAgent ? !showAgentConfigPage && !showCreateAgentModal && !selectedArtifact : isAiMainPageVisible && !showSaveCommandModal && !showCurrentConversationCustomAgentDetailSheet}
+      inputAriaLabel={inAgent ? '自定义智能体输入框' : undefined}
+      attachmentTray={draftAttachments.length > 0 ? (
+        <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles}
+          onPreview={openAttachmentPreview} onRemove={handleRemoveDraftAttachment} />
+      ) : undefined}
+      canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !composerSheetOpen}
+      modelBusy={modelBusy}
+      modelControls={modelControls}
+      canSubmit={canSend}
+      isResponding={isResponding}
+      isStopping={isStopping}
+      note="AI 生成内容可能有误，请核实重要信息"
+      plusExpanded={composerSheetOpen}
+      sessionKey={routeSessionId}
+      textExpanded={textComposerExpanded}
+      value={inputValue}
+      voiceMode={voiceMode}
+      onChange={setInputValue}
+      onPlusClick={openPlusSheet}
+      onStop={stopResponding}
+      onSubmit={(promptOverride) => submitPrompt(promptOverride, undefined, undefined, {
+        enableWebSearch: inAgent ? customAgentConversationDetail?.enable_web_search === true : webSearchEnabled,
+        preserveInput: promptOverride !== undefined,
+      })}
+      onTextEditingChange={setTextEditing}
+      onVoiceModeChange={setVoiceMode}
+    />
+  )
+
   return showCommandsPage ? (
     <AiCommandsPage
       workspaceScrollbars={!isPartnerRoute}
@@ -1733,7 +1770,7 @@ export default function AIPage({
       )}
     <div className={`ai-page${isPartnerRoute ? '' : ' has-workspace-navigation'}`} ref={pageRef}>
       {/* 切换栏目仅隐藏任务内容和输入区，不卸载消息、草稿或中止回复。 */}
-      <div className="ai-workspace-content" hidden={isFeatureActive}>
+      <div className="ai-workspace-content" hidden={isFeatureActive || showCustomAgentConversationPage}>
         <div className="ai-page-header">
           <button
             aria-controls={isPartnerRoute ? undefined : sidebarId}
@@ -1875,7 +1912,7 @@ export default function AIPage({
         </div>
       )}
 
-      <div className="ai-page-bottom" hidden={isFeatureActive}>
+      <div className="ai-page-bottom" hidden={isFeatureActive || showCustomAgentConversationPage}>
         {requestError ? <div className="ai-page-error-banner">{requestError}</div> : null}
         {!requestError && localBannerMessage ? <div className="ai-page-notice-banner">{localBannerMessage}</div> : null}
         {isPartnerRoute && draftAttachments.length > 0 && (
@@ -1921,35 +1958,7 @@ export default function AIPage({
             onSubmit={(promptOverride) => submitPrompt(promptOverride, undefined, undefined, { enableWebSearch: webSearchEnabled })}
           />
         ) : (
-          <AiWorkspaceComposer
-            active={isAiMainPageVisible && !showSaveCommandModal && !showCurrentConversationCustomAgentDetailSheet}
-            attachmentTray={draftAttachments.length > 0 ? (
-              <AiDraftAttachments attachments={draftAttachments} imageFiles={draftImageFiles}
-                onPreview={openAttachmentPreview} onRemove={handleRemoveDraftAttachment} />
-            ) : undefined}
-            canRecord={!modelBusy && draftAttachments.every((attachment) => attachment.status === 'completed') && !composerSheetOpen}
-            modelBusy={modelBusy}
-            modelControls={modelControls}
-            canSubmit={canSend}
-            isResponding={isResponding}
-            isStopping={isStopping}
-            note="AI 生成内容可能有误，请核实重要信息"
-            placeholder="发消息或按住说话…"
-            plusExpanded={composerSheetOpen}
-            sessionKey={routeSessionId}
-            textExpanded={textComposerExpanded}
-            value={inputValue}
-            voiceMode={voiceMode}
-            onChange={setInputValue}
-            onPlusClick={openPlusSheet}
-            onStop={stopResponding}
-            onSubmit={(promptOverride) => submitPrompt(promptOverride, undefined, undefined, {
-              enableWebSearch: webSearchEnabled,
-              preserveInput: promptOverride !== undefined,
-            })}
-            onTextEditingChange={setTextEditing}
-            onVoiceModeChange={setVoiceMode}
-          />
+          !showCustomAgentConversationPage && renderChatComposer(false)
         )}
         <input
           accept={fileInputAccept}
@@ -2012,56 +2021,59 @@ export default function AIPage({
             </button>
           </div>
 
-          {partnerLoading ? <AiLoading message="配置加载中…" /> : null}
           {partnerError ? <div className="ai-partner-settings-status is-error">{partnerError}</div> : null}
 
           <div className="ai-partner-settings-body">
-            <div className="ai-partner-settings-avatar-card">
-              <AiNameAvatar
-                ariaLabel={`${partnerDraft?.agentName || builtInAgent.name}头像`}
-                avatarUrl={partnerDraft?.avatarUrl}
-                className="ai-partner-settings-avatar-preview"
-                imageClassName="ai-partner-settings-avatar-preview-image"
-                name={partnerDraft?.agentName || builtInAgent.name || '建'}
-                tone="white"
-              />
-              <div className="ai-partner-settings-avatar-meta">
-                <div className="ai-partner-settings-avatar-title">伙伴头像</div>
-                <div className="ai-partner-settings-avatar-desc">支持直接上传图片，保存后会同步更新伙伴头像。</div>
-              </div>
-              <button
-                className="ai-partner-settings-upload-btn"
-                disabled={partnerSaving || partnerAvatarUploading}
-                type="button"
-                onClick={() => partnerAvatarInputRef.current?.click()}
-              >
-                {partnerAvatarUploading ? '上传中...' : '上传头像'}
-              </button>
-            </div>
-            <label className="ai-partner-settings-field">
-              <span className="ai-partner-settings-field-label">
-                伙伴名称
-                <span className="ai-partner-settings-label-required">*</span>
-              </span>
-              <input
-                className="ai-partner-settings-input"
-                disabled={partnerSaving || partnerAvatarUploading}
-                type="text"
-                value={partnerDraft?.agentName ?? builtInAgent.name}
-                onChange={(event) => updatePartnerDraftField('agentName', event.target.value)}
-              />
-            </label>
-            {PARTNER_WORKSPACE_FIELDS.map(({ field, label }) => (
-              <label className="ai-partner-settings-field" key={label}>
-                <span>{label}</span>
-                <textarea
-                  className="ai-partner-settings-textarea"
-                  disabled={partnerSaving}
-                  value={partnerDraft?.[field] ?? ''}
-                  onChange={(event) => updatePartnerDraftField(field, event.target.value)}
-                />
-              </label>
-            ))}
+            {partnerLoading ? <AiLoading fill message="配置加载中…" /> : (
+              <>
+                <div className="ai-partner-settings-avatar-card">
+                  <AiNameAvatar
+                    ariaLabel={`${partnerDraft?.agentName || builtInAgent.name}头像`}
+                    avatarUrl={partnerDraft?.avatarUrl}
+                    className="ai-partner-settings-avatar-preview"
+                    imageClassName="ai-partner-settings-avatar-preview-image"
+                    name={partnerDraft?.agentName || builtInAgent.name || '建'}
+                    tone="white"
+                  />
+                  <div className="ai-partner-settings-avatar-meta">
+                    <div className="ai-partner-settings-avatar-title">伙伴头像</div>
+                    <div className="ai-partner-settings-avatar-desc">支持直接上传图片，保存后会同步更新伙伴头像。</div>
+                  </div>
+                  <button
+                    className="ai-partner-settings-upload-btn"
+                    disabled={partnerSaving || partnerAvatarUploading}
+                    type="button"
+                    onClick={() => partnerAvatarInputRef.current?.click()}
+                  >
+                    {partnerAvatarUploading ? '上传中...' : '上传头像'}
+                  </button>
+                </div>
+                <label className="ai-partner-settings-field">
+                  <span className="ai-partner-settings-field-label">
+                    伙伴名称
+                    <span className="ai-partner-settings-label-required">*</span>
+                  </span>
+                  <input
+                    className="ai-partner-settings-input"
+                    disabled={partnerSaving || partnerAvatarUploading}
+                    type="text"
+                    value={partnerDraft?.agentName ?? builtInAgent.name}
+                    onChange={(event) => updatePartnerDraftField('agentName', event.target.value)}
+                  />
+                </label>
+                {PARTNER_WORKSPACE_FIELDS.map(({ field, label }) => (
+                  <label className="ai-partner-settings-field" key={label}>
+                    <span>{label}</span>
+                    <textarea
+                      className="ai-partner-settings-textarea"
+                      disabled={partnerSaving}
+                      value={partnerDraft?.[field] ?? ''}
+                      onChange={(event) => updatePartnerDraftField(field, event.target.value)}
+                    />
+                  </label>
+                ))}
+              </>
+            )}
           </div>
 
           <div className="ai-partner-settings-actions">
@@ -2099,7 +2111,7 @@ export default function AIPage({
                   <div className="ai-drawer-section">
                     <div className="ai-drawer-section-title">对话历史</div>
                     {isLoadingSessions ? (
-                      <AiLoading message="正在刷新会话…" />
+                      <AiLoading fill message="正在刷新会话…" />
                     ) : !hasGroupedSessions ? (
                       <div className="ai-drawer-chat-empty">还没有历史会话</div>
                     ) : (
@@ -2144,9 +2156,10 @@ export default function AIPage({
         </div>
       )}
 
-      {showPlusSheet && !isPartnerRoute && !showCustomAgentConversationPage && (
+      {showPlusSheet && !isPartnerRoute && (
         <AiWorkspacePlusSheet
-          webSearchEnabled={webSearchEnabled}
+          webSearchEnabled={showCustomAgentConversationPage ? customAgentConversationDetail?.enable_web_search === true : webSearchEnabled}
+          webSearchLocked={showCustomAgentConversationPage}
           onClose={closePlusSheet}
           onOpenLibrary={openLibraryPickerSheet}
           onOpenSkills={openSkillSelectorSheet}
@@ -2156,7 +2169,7 @@ export default function AIPage({
         />
       )}
 
-      {showPlusSheet && (isPartnerRoute || showCustomAgentConversationPage) && (
+      {showPlusSheet && isPartnerRoute && (
         <AiBottomSheet className="ai-plus-sheet" label="更多操作" onClose={closePlusSheet}>
           <div className="ai-plus-sheet-grid">
             {showFileMenu && (
@@ -2305,29 +2318,20 @@ export default function AIPage({
           sessionName={headerTitle}
           avatarUrl={customAgentConversationDetail?.avatar_url || null}
           canEdit={canEditCustomAgentConversation}
-          canSubmit={canSend}
+          composer={renderChatComposer(true)}
           description={customAgentConversationDetail?.description || activeAgent?.description || ''}
           error={customAgentConversationError}
-          inputValue={inputValue}
-          isResponding={isResponding}
-          isStopping={isStopping}
           loading={customAgentConversationLoading}
           messages={messages}
           questions={customAgentConversationQuestions}
           requestError={requestError}
           onBack={closeCustomAgentConversation}
-          onInputChange={setInputValue}
           onOpenEdit={openCustomAgentConfigFromConversation}
-          onPlusClick={() => {
-            setShowFileMenu(false)
-            setShowPlusSheet(true)
-          }}
           onSelectArtifact={setSelectedArtifact}
-          onStop={stopResponding}
-          onSubmit={(promptOverride) => submitPrompt(promptOverride, undefined, undefined, {
-            enableWebSearch: customAgentConversationDetail?.enable_web_search === true,
-          })}
-          onSuggestionClick={setInputValue}
+          onSuggestionClick={(prompt) => {
+            setVoiceMode(false)
+            setInputValue(prompt)
+          }}
         />
       )}
 

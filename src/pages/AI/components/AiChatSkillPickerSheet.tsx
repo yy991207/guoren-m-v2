@@ -35,7 +35,7 @@ export function AiChatSkillPickerSheet({
       </div>
 
       <div className="ai-chat-skill-picker-list">
-        {loading ? <AiLoading message="技能加载中…" /> : null}
+        {loading ? <AiLoading fill message="技能加载中…" /> : null}
         {!loading && error && <div className="ai-chat-skill-picker-status" role="status">{error}</div>}
         {!loading && !error && groups.map(([key, label]) => (
           <section aria-label={label} className="ai-chat-skill-picker-group" key={key}>

@@ -32,6 +32,7 @@ import { AiAgentConversationPreview } from './AiAgentConversationPreview'
 import { AiPublishSettings } from './AiPublishSettings'
 import { AiSelectionSheet } from './AiSelectionSheet'
 import { AiSkillCard } from './AiSkillCard'
+import { AiWorkspaceComposer } from './AiWorkspaceComposer'
 
 type AiAgentConfigTabKey = 'debug' | 'config'
 type AiSkillSheetView = 'added' | 'created' | 'recommended'
@@ -286,6 +287,8 @@ export function AiAgentConfigPage({
   const [activeTab, setActiveTab] = useState<AiAgentConfigTabKey>('config')
   const [skillSheetView, setSkillSheetView] = useState<AiSkillSheetView>('added')
   const [debugInput, setDebugInput] = useState('')
+  const [debugVoiceMode, setDebugVoiceMode] = useState(false)
+  const [debugTextEditing, setDebugTextEditing] = useState(false)
   const [debugMessages, setDebugMessages] = useState<ChatMessage[]>([])
   const [debugRequestError, setDebugRequestError] = useState('')
   const [debugIsResponding, setDebugIsResponding] = useState(false)
@@ -984,23 +987,42 @@ export function AiAgentConfigPage({
       description={draft.description}
       avatarUrl={agentAvatarUrl}
       avatarUploading={agentAvatarUploading}
-      canSubmit={canSubmitDebugPrompt}
+      composer={({ onPlusClick, overlayOpen }) => (
+        <AiWorkspaceComposer
+          active={!overlayOpen && !showSkillSheet && !showKnowledgeSheet}
+          actionAriaLabel="发送调试消息"
+          canRecord={!overlayOpen}
+          canSubmit={canSubmitDebugPrompt}
+          inputAriaLabel="智能体调试输入框"
+          isResponding={debugIsResponding}
+          isStopping={debugIsStopping}
+          note="AI 生成内容可能有误，请核实重要信息"
+          plusExpanded={overlayOpen}
+          sessionKey={agentId ?? null}
+          textExpanded={debugTextEditing || Boolean(debugInput.trim())}
+          value={debugInput}
+          voiceMode={debugVoiceMode}
+          onChange={setDebugInput}
+          onPlusClick={onPlusClick}
+          onStop={handleDebugStop}
+          onSubmit={handleDebugSubmit}
+          onTextEditingChange={setDebugTextEditing}
+          onVoiceModeChange={setDebugVoiceMode}
+        />
+      )}
       configuredSkills={selectedSkills.map((skill) => ({
         id: skill.id,
         title: skill.title,
         description: skill.description,
       }))}
-      inputValue={debugInput}
-      isResponding={debugIsResponding}
-      isStopping={debugIsStopping}
       messages={debugMessages}
       questions={visiblePresetQuestions}
       requestError={debugRequestError}
       agentName={draft.agentName || pageTitle}
-      onInputChange={setDebugInput}
-      onStop={handleDebugStop}
-      onSubmit={handleDebugSubmit}
-      onSuggestionClick={setDebugInput}
+      onSuggestionClick={(prompt) => {
+        setDebugVoiceMode(false)
+        setDebugInput(prompt)
+      }}
       onLockedWebSearchClick={() => {
         Toast.show({ content: '当前智能体未开启联网检索，无法配置' })
       }}
@@ -1242,7 +1264,10 @@ export function AiAgentConfigPage({
             aria-pressed={activeTab === 'config'}
             className={`ai-agent-config-tab${activeTab === 'config' ? ' is-active' : ''}`}
             type="button"
-            onClick={() => setActiveTab('config')}
+            onClick={() => {
+              setDebugTextEditing(false)
+              setActiveTab('config')
+            }}
           >
             搭建
           </button>
@@ -1314,7 +1339,7 @@ export function AiAgentConfigPage({
 
           {skillSheetView === 'recommended' ? (
             <>
-              {recommendedSkillsLoading ? <AiLoading message="加载中…" /> : null}
+              {recommendedSkillsLoading ? <AiLoading fill message="加载中…" /> : null}
               {!recommendedSkillsLoading && recommendedSkillsError ? <div className="ai-selection-sheet-status is-error">{recommendedSkillsError}</div> : null}
               {!recommendedSkillsLoading && !recommendedSkillsError && recommendedSkillOptions.length === 0 ? (
                 <div className="ai-selection-sheet-status">暂无推荐技能</div>
@@ -1325,7 +1350,7 @@ export function AiAgentConfigPage({
             </>
           ) : (
             <>
-              {activeSkillSheetLoading ? <AiLoading message="加载中…" /> : null}
+              {activeSkillSheetLoading ? <AiLoading fill message="加载中…" /> : null}
               {!activeSkillSheetLoading && activeSkillSheetError ? <div className="ai-selection-sheet-status is-error">{activeSkillSheetError}</div> : null}
               {!activeSkillSheetLoading && !activeSkillSheetError && activeSkillSheetOptions.length === 0 ? (
                 <div className="ai-selection-sheet-status">{activeSkillSheetEmptyText}</div>

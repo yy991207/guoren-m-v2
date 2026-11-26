@@ -419,7 +419,7 @@ export function AiSidebarLibraryPage({
       </div>
 
       <div className="ai-library-hub-list">
-        {loading ? <AiLoading message="库文件加载中…" variant="page" /> : null}
+        {loading ? <AiLoading fill message="库文件加载中…" variant="page" /> : null}
         {!loading && error ? <div className="ai-library-hub-empty">{error}</div> : null}
         {!loading && !error && visibleFiles.length === 0 ? <div className="ai-library-hub-empty">当前没有可展示的库文件。</div> : null}
         {!loading && !error && visibleFiles.map((item) => (

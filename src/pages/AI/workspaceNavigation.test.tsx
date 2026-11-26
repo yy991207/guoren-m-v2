@@ -492,6 +492,54 @@ it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、�
   expect(JSON.parse(String(publish?.[1])).enabled_skills).toEqual([{ skill_name: 'lesson' }, { skill_name: 'search' }])
 })
 
+it('智能体正式对话和测试与预览都使用任务输入框，调试不向正式会话发送', async () => {
+  localStorage.setItem('userInfo', JSON.stringify({ id: 'shared-composer-test' }))
+  const agent = {
+    agent_id: 'course-agent', creator_user_id: 'shared-composer-test', agent_name: '备课智能体', description: '整理教案',
+    agent_prompt: '帮助备课', is_active: true, enable_web_search: true, enabled_skills: [], knowledge_spaces: [],
+    preset_questions: [{ question: '怎么备课？', instruction: '按课程大纲备课' }],
+  }
+  const debugPayloads: unknown[] = []
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (path.endsWith('/custom-agents/public/list')) return Response.json({ data: { agents: [agent], total: 1 } })
+    if (path.endsWith('/custom-agents/course-agent')) return Response.json({ data: { agent } })
+    if (path.endsWith('/debug/stream')) {
+      debugPayloads.push(JSON.parse(String(options?.body)))
+      return new Response('data: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } })
+    }
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  const taskInput = screen.getByRole('textbox', { name: '提问输入框' })
+  expect(taskInput.closest('.ai-workspace-composer')).not.toBeNull()
+  fireEvent.click(within(screen.getByRole('navigation', { name: 'AI 工作区' })).getByRole('button', { name: '智能体' }))
+  fireEvent.click(await screen.findByRole('button', { name: '去对话：备课智能体' }))
+  const liveInput = await screen.findByRole('textbox', { name: '自定义智能体输入框' })
+  expect(liveInput.closest('.ai-workspace-composer')).not.toBeNull()
+  expect(liveInput).toHaveAttribute('placeholder', '发消息或按住说话…')
+  fireEvent.click(screen.getByRole('button', { name: '怎么备课？' }))
+  expect(liveInput).toHaveValue('按课程大纲备课')
+  fireEvent.click(screen.getByRole('button', { name: '打开更多操作' }))
+  const plus = screen.getByRole('dialog', { name: '更多操作' })
+  expect(within(plus).getByRole('button', { name: '拍照' })).toBeVisible()
+  expect(within(plus).getByRole('switch', { name: /联网/ })).toBeDisabled()
+  fireEvent.click(plus)
+
+  fireEvent.click(screen.getByRole('button', { name: '编辑自定义智能体' }))
+  fireEvent.click(screen.getByRole('button', { name: '测试与预览' }))
+  const debugInput = screen.getByRole('textbox', { name: '智能体调试输入框' })
+  const debugComposer = debugInput.closest<HTMLElement>('.ai-workspace-composer')!
+  expect(debugInput).toHaveAttribute('placeholder', '发消息或按住说话…')
+  fireEvent.change(debugInput, { target: { value: '调试这一轮' } })
+  expect(within(debugComposer).queryByRole('button', { name: /选择模型|思考强度/ })).not.toBeInTheDocument()
+  fireEvent.click(within(debugComposer).getByRole('button', { name: '发送调试消息' }))
+  expect(await screen.findByText('调试这一轮')).toBeVisible()
+  expect(debugPayloads).toEqual([expect.objectContaining({ message: '调试这一轮', agent_prompt: '帮助备课' })])
+  expect(debugPayloads[0]).not.toHaveProperty('model')
+  expect(vi.mocked(authorizedFetch).mock.calls.some(([url, options]) => String(url).includes('/chat/sessions') && options?.method === 'POST')).toBe(false)
+})
+
 it('从任务直接进入三个栏目再返回，保留原消息、草稿和会话地址，不重新加载会话', async () => {
   const session = { session_id: 'kept', session_name: '原会话', messages: [
     { message_id: 'msg', role: 'user', content: '原消息', created_at: '2026-01-01' },

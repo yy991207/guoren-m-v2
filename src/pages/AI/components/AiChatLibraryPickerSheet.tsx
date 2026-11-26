@@ -94,7 +94,7 @@ export function AiChatLibraryPickerSheet({
       </div>
 
       <div className="ai-library-picker-content">
-        {loading && <AiLoading message="资料库加载中…" variant="page" />}
+        {loading && <AiLoading fill message="资料库加载中…" variant="page" />}
         {!loading && error && <div className="library-empty" role="alert">{error}</div>}
         {!loading && !error && items.length === 0 && <div className="library-empty library-empty-title">暂无可引用文件</div>}
         {!loading && !error && items.map(item => {

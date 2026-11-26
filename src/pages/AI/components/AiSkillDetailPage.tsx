@@ -170,7 +170,7 @@ export default function AiSkillDetailPage({
       </div>
 
       <div className="ai-skill-detail-content">
-        {loading ? <AiLoading message="技能详情加载中…" variant="page" /> : null}
+        {loading ? <AiLoading fill message="技能详情加载中…" variant="page" /> : null}
         {!loading && error ? <div className="ai-skill-detail-status">{error}</div> : null}
 
         {!loading && !error ? (

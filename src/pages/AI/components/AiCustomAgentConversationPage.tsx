@@ -1,4 +1,5 @@
 import { SetOutline } from 'antd-mobile-icons'
+import type { ReactNode } from 'react'
 
 import type { ChatMessage } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
@@ -19,22 +20,15 @@ type AiCustomAgentConversationPageProps = {
   description: string
   questions: AiCustomAgentConversationQuestion[]
   messages?: ChatMessage[]
-  inputValue: string
+  composer: ReactNode
   requestError?: string
-  canSubmit?: boolean
-  isResponding?: boolean
-  isStopping?: boolean
   loading?: boolean
   error?: string
   canEdit?: boolean
   onBack: () => void
   onOpenEdit?: () => void
-  onInputChange: (value: string) => void
   onSelectArtifact?: (artifact: SelectedArtifact) => void
-  onStop?: () => void | Promise<void>
-  onSubmit?: (promptOverride?: string) => void | Promise<void>
   onSuggestionClick: (prompt: string) => void
-  onPlusClick?: () => void
 }
 
 export function AiCustomAgentConversationPage({
@@ -44,22 +38,15 @@ export function AiCustomAgentConversationPage({
   description,
   questions,
   messages,
-  inputValue,
+  composer,
   requestError = '',
-  canSubmit = false,
-  isResponding = false,
-  isStopping = false,
   loading = false,
   error = '',
   canEdit = false,
   onBack,
   onOpenEdit,
-  onInputChange,
   onSelectArtifact,
-  onStop,
-  onSubmit,
   onSuggestionClick,
-  onPlusClick,
 }: AiCustomAgentConversationPageProps) {
   const heading = <AiConversationHeading sessionName={sessionName} agentName={agentName} avatarUrl={avatarUrl} />
 
@@ -81,7 +68,7 @@ export function AiCustomAgentConversationPage({
           <div aria-hidden="true" className="ai-agent-config-header-spacer" />
         </div>
 
-        {loading ? <AiLoading message="智能体加载中…" variant="page" /> : (
+        {loading ? <AiLoading fill message="智能体加载中…" variant="page" /> : (
           <div className="ai-custom-agent-conversation-status" role="alert">{error || '智能体加载失败'}</div>
         )}
       </div>
@@ -119,25 +106,13 @@ export function AiCustomAgentConversationPage({
       <AiAgentConversationPreview
         agentName={agentName}
         avatarUrl={avatarUrl}
-        canSubmit={canSubmit}
-        composerActionAriaLabel="发送消息"
-        composerInputAriaLabel="自定义智能体输入框"
-        composerNote="AI 生成内容可能有误，请核实重要信息"
-        configuredSkills={[]}
+        composer={composer}
         description={description}
-        inputValue={inputValue}
-        isResponding={isResponding}
-        isStopping={isStopping}
         messages={messages}
-        plusAriaLabel="打开更多操作"
         questions={questions}
         requestError={requestError}
         showProfileEditButton={false}
-        onComposerPlusClick={onPlusClick}
-        onInputChange={onInputChange}
         onSelectArtifact={onSelectArtifact}
-        onStop={onStop}
-        onSubmit={onSubmit}
         onSuggestionClick={onSuggestionClick}
       />
     </div>

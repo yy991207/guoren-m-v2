@@ -81,7 +81,7 @@ export function AiDiscoverPage({
   }, [sectionLengthSignature])
 
   const renderSection = (section: DiscoverSection) => {
-    if (discoverLoading) return <AiLoading message="智能体列表加载中…" variant="page" />
+    if (discoverLoading) return <AiLoading fill message="智能体列表加载中…" variant="page" />
     if (discoverError) return <div className="ai-data-status" role="alert">{discoverError}</div>
     if (!section.items.length) return <div className="ai-discover-empty-state">{DISCOVER_SECTION_EMPTY_TEXT[section.key]}</div>
     return (

@@ -36,7 +36,7 @@ export function AiWorkspaceModelSheet({ mode, controls, onClose }: Props) {
             {option(null, 'Auto', controls.defaultItem ? `使用 ${controls.defaultItem.display_name} 模型` : '使用默认模型')}
             {!controls.loading && !controls.error && controls.models.map((item) => option(item.model, item.display_name))}
           </div>
-          {controls.loading && <AiLoading message="模型列表加载中…" />}
+          {controls.loading && <AiLoading fill message="模型列表加载中…" />}
           {!controls.loading && controls.error && <div className="ai-model-load-error" role="alert">{controls.error}<button type="button" onClick={() => void controls.reload()}>重新加载</button></div>}
         </>
       ) : (

@@ -5,6 +5,7 @@ import './AiWorkspacePlusSheet.css'
 
 type AiWorkspacePlusSheetProps = {
   webSearchEnabled: boolean
+  webSearchLocked?: boolean
   onWebSearchChange: (enabled: boolean) => void
   onTakePhoto: () => void
   onPickFile: () => void
@@ -15,6 +16,7 @@ type AiWorkspacePlusSheetProps = {
 
 export function AiWorkspacePlusSheet({
   webSearchEnabled,
+  webSearchLocked = false,
   onWebSearchChange,
   onTakePhoto,
   onPickFile,
@@ -51,6 +53,8 @@ export function AiWorkspacePlusSheet({
         </button>
         <button
           aria-checked={webSearchEnabled}
+          aria-label={webSearchLocked ? '联网（由智能体配置控制）' : undefined}
+          disabled={webSearchLocked}
           role="switch"
           type="button"
           onClick={() => onWebSearchChange(!webSearchEnabled)}

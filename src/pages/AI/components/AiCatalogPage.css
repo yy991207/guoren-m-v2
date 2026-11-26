@@ -143,10 +143,6 @@
   padding-inline: 16px;
 }
 
-.ai-catalog-content > [role='tabpanel'] > .ai-loading {
-  flex: 1;
-  justify-content: center;
-}
 
 .ai-catalog-grid {
   display: grid;

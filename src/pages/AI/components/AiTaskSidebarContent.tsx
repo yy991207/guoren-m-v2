@@ -92,7 +92,7 @@ export function AiTaskSidebarContent({
       {/* 折叠只隐藏历史区，不卸载节点，因此列表滚动位置保持不变。 */}
       <div aria-busy={isLoading} aria-labelledby={toggleId} className="ai-task-sidebar-content__history" hidden={!tasksExpanded} id={tasksId} role="region">
         {isLoading ? (
-          <AiLoading message="正在刷新会话…" />
+          <AiLoading fill message="正在刷新会话…" />
         ) : !hasSessions ? (
           <div className="ai-task-sidebar-content__empty" role="status">还没有历史会话</div>
         ) : sections.map(([key, title]) => (

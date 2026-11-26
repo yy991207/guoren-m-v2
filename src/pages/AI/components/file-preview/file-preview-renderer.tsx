@@ -69,7 +69,7 @@ export function FilePreviewRenderer({
   const courseTable = useMemo(() => language === 'json' && content ? parseCourseTableArtifact(content) : null, [content, language])
 
   if (loading) {
-    return <div className={styles.previewLoading}><AiLoading message="正在加载文件内容，请稍候" variant="page" /></div>
+    return <AiLoading fill message="正在加载文件内容，请稍候" variant="page" />
   }
 
   if (errorMessage) {

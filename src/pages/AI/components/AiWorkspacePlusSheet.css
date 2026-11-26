@@ -58,7 +58,9 @@
   text-align: start;
 }
 
-.ai-workspace-plus-sheet button:active {
+.ai-workspace-plus-sheet button:disabled { opacity: 0.6; cursor: default; }
+
+.ai-workspace-plus-sheet button:not(:disabled):active {
   background: #e6e6e6;
 }
 

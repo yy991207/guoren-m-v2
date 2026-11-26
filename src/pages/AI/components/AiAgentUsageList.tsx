@@ -73,7 +73,7 @@ export function AiAgentUsageList({
   }, [])
 
   if (loading) {
-    return <AiLoading message="正在刷新智能体…" />
+    return <AiLoading fill message="正在刷新智能体…" />
   }
 
   if (error) {

@@ -38,7 +38,7 @@ export function AiSkillsPage({
   const renderList = ({ key, empty, loading }: (typeof CATEGORIES)[number]) => {
     const list = lists[key]
     const managed = key === 'added' || key === 'created'
-    if (list.loading) return <AiLoading message={loading} variant="page" />
+    if (list.loading) return <AiLoading fill message={loading} variant="page" />
     if (list.error) return <div className="ai-data-status" role="alert">{list.error}</div>
     if (list.items.length === 0) return <div className="ai-data-status">{empty}</div>
     return (

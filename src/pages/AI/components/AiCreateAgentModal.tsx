@@ -348,7 +348,7 @@ export function AiCreateAgentModal({
             <div className="ai-create-agent-modal-templates-title">没有灵感？试试已经做好的智能体～</div>
             <div className="ai-create-agent-modal-templates">
               {templatesLoading ? (
-                <AiLoading message="模板加载中…" />
+                <AiLoading fill message="模板加载中…" />
               ) : templates.length === 0 ? (
                 <div className="ai-create-agent-modal-templates-state">暂无模板</div>
               ) : (

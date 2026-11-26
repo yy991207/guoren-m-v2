@@ -80,13 +80,15 @@ export interface AiWorkspaceComposerProps {
   attachmentTray?: ReactNode
   canRecord: boolean
   canSubmit: boolean
-  modelControls: ChatModelControls
-  modelBusy: boolean
+  modelControls?: ChatModelControls
+  modelBusy?: boolean
   className?: string
   isResponding: boolean
   isStopping: boolean
   note?: string
-  placeholder: string
+  inputAriaLabel?: string
+  actionAriaLabel?: string
+  placeholder?: string
   plusExpanded?: boolean
   sessionKey: string | null
   textExpanded: boolean
@@ -352,12 +354,14 @@ export function AiWorkspaceComposer({
   canRecord,
   canSubmit,
   modelControls,
-  modelBusy,
+  modelBusy = false,
   className,
   isResponding,
   isStopping,
   note,
-  placeholder,
+  inputAriaLabel = '提问输入框',
+  actionAriaLabel = '发送消息',
+  placeholder = '发消息或按住说话…',
   plusExpanded,
   sessionKey,
   textExpanded,
@@ -377,9 +381,9 @@ export function AiWorkspaceComposer({
   const [selector, setSelector] = useState<'model' | 'thinking' | null>(null)
   const expanded = !voiceMode && textExpanded
   const selectionLocked = !active || modelBusy || isResponding || isStopping
-  const modelSheetOpen = expanded && !plusExpanded && !selectionLocked && selector !== null
-    && (selector !== 'thinking' || modelControls.levels.length > 0)
-  const levelLabel = modelControls.thinkingLevel ? levelLabels[modelControls.thinkingLevel] : '选择档位'
+  const modelSheetOpen = Boolean(modelControls && expanded && !plusExpanded && !selectionLocked && selector !== null
+    && (selector !== 'thinking' || modelControls.levels.length > 0))
+  const levelLabel = modelControls?.thinkingLevel ? levelLabels[modelControls.thinkingLevel] : '选择档位'
   const canCapture = active && canRecord && voiceMode && !isResponding && !isStopping
   const { cancelCapture, capture, feedback, handleHoldBlur, handleLostPointerCapture, startCapture } = useComposerVoiceCapture({
     canCapture, onSubmit, sessionKey,
@@ -500,7 +504,7 @@ export function AiWorkspaceComposer({
         {attachmentTray && <div className="ai-workspace-composer-attachments">{attachmentTray}</div>}
         {!voiceMode && (
           <div className="ai-workspace-composer-field">
-            <label className="ai-workspace-composer-visually-hidden" htmlFor={fieldId}>提问输入框</label>
+            <label className="ai-workspace-composer-visually-hidden" htmlFor={fieldId}>{inputAriaLabel}</label>
             <TextArea
               autoSize={expanded ? TEXTAREA_ROWS : COMPACT_TEXTAREA_ROWS}
               disabled={!active}
@@ -544,7 +548,7 @@ export function AiWorkspaceComposer({
             {holdLabel}
           </button>
         )}
-        {expanded && (
+        {expanded && modelControls && (
           <div className="ai-workspace-composer-selectors">
             <button aria-expanded={modelSheetOpen && selector === 'model'} aria-haspopup="dialog" aria-label={`选择模型：${modelControls.label}`}
               className="ai-workspace-composer-model" disabled={selectionLocked} type="button"
@@ -578,7 +582,7 @@ export function AiWorkspaceComposer({
         </button>
         {(expanded || isResponding) && (
           <button
-            aria-label={isResponding ? '停止回答' : '发送消息'}
+            aria-label={isResponding ? '停止回答' : actionAriaLabel}
             className="ai-workspace-composer-icon ai-workspace-composer-action"
             disabled={actionDisabled}
             type="button"
@@ -589,7 +593,7 @@ export function AiWorkspaceComposer({
         )}
       </div>
       {note && <p className="ai-workspace-composer-note">{note}</p>}
-      {modelSheetOpen && selector && <AiWorkspaceModelSheet mode={selector} controls={modelControls} onClose={() => setSelector(null)} />}
+      {modelSheetOpen && selector && modelControls && <AiWorkspaceModelSheet mode={selector} controls={modelControls} onClose={() => setSelector(null)} />}
     </div>
   )
 }

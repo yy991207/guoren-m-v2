@@ -45,6 +45,8 @@
   background: #fff;
 }
 
+.ai-skill-detail-content:has(> .ai-loading[data-fill]) { padding-block-end: 0; }
+
 .ai-skill-detail-status {
   min-height: 280px;
   display: flex;

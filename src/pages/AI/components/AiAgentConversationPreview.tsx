@@ -1,7 +1,6 @@
-import { useEffect, useId, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import type { ChatMessage } from '../../../services/chat/types'
-import AppComposerInput from '../../../components/AppComposerInput'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
 import { AiAgentAvatar } from './AiAgentAvatar'
 import { AiBottomSheet } from './AiBottomSheet'
@@ -24,32 +23,20 @@ type AiAgentConversationPreviewProps = {
   avatarUrl?: string | null
   description: string
   avatarUploading?: boolean
-  inputValue: string
+  composer: ReactNode | ((controls: { onPlusClick: () => void; overlayOpen: boolean }) => ReactNode)
   requestError?: string
-  canSubmit?: boolean
-  isResponding?: boolean
-  isStopping?: boolean
   webSearchEnabled?: boolean
   webSearchLocked?: boolean
   configuredSkills?: AiAgentConversationPreviewSkill[]
   messages?: ChatMessage[]
   questions: AiAgentConversationPreviewQuestion[]
-  onInputChange: (value: string) => void
   onSelectArtifact?: (artifact: SelectedArtifact) => void
-  onStop?: () => void | Promise<void>
-  onSubmit?: (promptOverride?: string) => void | Promise<void>
   onSuggestionClick: (prompt: string) => void
   onToggleWebSearch?: () => void
   onLockedWebSearchClick?: () => void
   onAvatarChange?: (file: File) => void | Promise<void>
   onProfileSave?: (payload: { agentName: string; description: string }) => void
   showProfileEditButton?: boolean
-  composerActionAriaLabel?: string
-  composerInputAriaLabel?: string
-  composerNote?: string
-  composerPlaceholder?: string
-  plusAriaLabel?: string
-  onComposerPlusClick?: () => void
 }
 
 const EMPTY_MESSAGES: ChatMessage[] = []
@@ -59,32 +46,20 @@ export function AiAgentConversationPreview({
   avatarUrl,
   description,
   avatarUploading = false,
-  inputValue,
+  composer,
   requestError = '',
-  canSubmit = false,
-  isResponding = false,
-  isStopping = false,
   webSearchEnabled = false,
   webSearchLocked = false,
   configuredSkills = [],
   messages = EMPTY_MESSAGES,
   questions,
-  onInputChange,
   onSelectArtifact,
-  onStop,
-  onSubmit,
   onSuggestionClick,
   onToggleWebSearch,
   onLockedWebSearchClick,
   onAvatarChange,
   onProfileSave,
   showProfileEditButton = true,
-  composerActionAriaLabel = '发送调试消息',
-  composerInputAriaLabel = '智能体调试输入框',
-  composerNote = 'AI 生成内容可能有误，请核实重要信息',
-  composerPlaceholder = '问我任何问题',
-  plusAriaLabel = '打开更多操作',
-  onComposerPlusClick,
 }: AiAgentConversationPreviewProps) {
   const threadRef = useRef<HTMLDivElement | null>(null)
   const avatarInputRef = useRef<HTMLInputElement | null>(null)
@@ -406,31 +381,12 @@ export function AiAgentConversationPreview({
         </AiBottomSheet>
       ) : null}
 
-      <div className="ai-page-bottom ai-agent-chat-preview-bottom">
+      <div className="ai-agent-chat-preview-bottom">
         {requestError ? <div className="ai-page-error-banner">{requestError}</div> : null}
-        <AppComposerInput
-          actionAriaLabel={composerActionAriaLabel}
-          canSubmit={canSubmit}
-          className="ai-page-composer-input ai-agent-chat-preview-composer"
-          inputAriaLabel={composerInputAriaLabel}
-          isResponding={isResponding}
-          isStopping={isStopping}
-          note={composerNote}
-          placeholder={composerPlaceholder}
-          plusAriaLabel={plusAriaLabel}
-          value={inputValue}
-          onChange={onInputChange}
-          onPlusClick={() => {
-            if (onComposerPlusClick) {
-              onComposerPlusClick()
-              return
-            }
-
-            setShowActionSheet(true)
-          }}
-          onStop={onStop}
-          onSubmit={onSubmit}
-        />
+        {typeof composer === 'function' ? composer({
+          onPlusClick: () => setShowActionSheet(true),
+          overlayOpen: showActionSheet || showSkillSheet || showProfileSheet,
+        }) : composer}
       </div>
     </div>
   )
