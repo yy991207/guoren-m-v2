@@ -49,23 +49,6 @@
   outline-offset: 2px;
 }
 
-.ai-page-header-title,
-.ai-page-header-spacer {
-  flex: 1;
-  min-width: 0;
-}
-
-.ai-page-header-title {
-  padding: 0 12px;
-  font-size: 15px;
-  font-weight: 700;
-  color: #111827;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .ai-page-header-right {
   position: relative;
   display: flex;
@@ -1885,6 +1868,10 @@
   margin-top: 12px;
 }
 
+.ai-discover-saved > .ai-section-tabs {
+  inline-size: 50%;
+}
+
 .ai-discover-saved .ai-discover-section {
   margin-top: 10px;
 }
@@ -2538,18 +2525,9 @@
   padding-top: calc(12px + env(safe-area-inset-top));
 }
 
-.ai-custom-agent-conversation-header-title {
-  flex: 1;
-  min-width: 0;
-  padding: 0 12px;
-  color: #1f2329;
-  font-size: 16px;
-  line-height: 1.4;
-  font-weight: 700;
-  text-align: center;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ai-custom-agent-conversation-page .ai-conversation-heading {
+  --ai-conversation-heading-color: #1f2329;
+  --ai-conversation-heading-size: 16px;
 }
 
 .ai-custom-agent-conversation-status {

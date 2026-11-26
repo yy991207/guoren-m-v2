@@ -57,6 +57,7 @@ import { AiCustomAgentConversationPage } from './components/AiCustomAgentConvers
 import { AiCustomAgentDetailSheet } from './components/AiCustomAgentDetailSheet'
 import AiCommandsPage, { type AiCommandsPageTabKey } from './components/AiCommandsPage'
 import { AiConversationHeaderActions } from './components/AiConversationHeaderActions'
+import { AiConversationHeading } from './components/AiConversationHeading'
 import { AiCreateAgentModal } from './components/AiCreateAgentModal'
 import { AiDiscoverPage } from './components/AiDiscoverPage'
 import { AiDrawerSessionGroup } from './components/AiDrawerSessionGroup'
@@ -464,6 +465,7 @@ export default function AIPage({
     removeSessionFromList,
     refreshSessions,
     requestError,
+    restoredSessionHeader,
     routeSessionId,
     selectedArtifact,
     sessions,
@@ -529,19 +531,23 @@ export default function AIPage({
       avatarUrl: partnerConfig?.avatarUrl?.trim() || '',
     }
   }, [partnerConfig])
-  const headerTitle = currentRouteSession?.session_name?.trim() || ''
-  const customAgentConversationHeaderTitle = currentRouteSession?.session_name?.trim()
-    || customAgentConversationDetail?.agent_name
-    || activeAgent?.agentName
-    || ''
-  const currentConversationCustomAgentId = currentRouteSession?.agent_id?.trim() || activeAgent?.agentId || ''
-  const currentConversationCustomAgentName = currentConversationCustomAgentDetail?.agent_name
-    || currentRouteSession?.agent_info?.agent_name?.trim()
-    || activeAgent?.agentName
-    || ''
-  const currentConversationCustomAgentAvatarUrl = currentConversationCustomAgentDetail?.avatar_url
-    || currentRouteSession?.agent_info?.avatar_url
+  const headerTitle = currentRouteSession?.session_name?.trim() || restoredSessionHeader?.session_name?.trim() || ''
+  const routeAgentId = currentRouteSession?.agent_id?.trim() || restoredSessionHeader?.agent_id?.trim() || ''
+  const currentConversationCustomAgentId = routeAgentId || activeAgent?.agentId || ''
+  // 详情可能仍是上一个智能体的；只使用与当前会话绑定相同的资料。
+  const matchingAgentDetail = currentConversationCustomAgentDetail?.agent_id === currentConversationCustomAgentId
+    ? currentConversationCustomAgentDetail : null
+  const listedAgentInfo = currentRouteSession?.agent_id?.trim() === routeAgentId ? currentRouteSession?.agent_info : null
+  const restoredAgentInfo = restoredSessionHeader?.agent_id?.trim() === routeAgentId ? restoredSessionHeader?.agent_info : null
+  const currentConversationCustomAgentName = matchingAgentDetail?.agent_name?.trim()
+    || listedAgentInfo?.agent_name?.trim()
+    || restoredAgentInfo?.agent_name?.trim()
+    || (activeAgent?.agentId === currentConversationCustomAgentId ? activeAgent.agentName : '')
+  const currentConversationCustomAgentAvatarUrl = matchingAgentDetail?.avatar_url
+    || listedAgentInfo?.avatar_url
+    || restoredAgentInfo?.avatar_url
     || null
+  const showHistoryAgentHeading = !isPartnerRoute && Boolean(routeAgentId)
   const currentConversationCustomAgentDescription = currentConversationCustomAgentDetail?.description
     || activeAgent?.description
     || ''
@@ -1880,7 +1886,11 @@ export default function AIPage({
               </svg>
             ) : <AiSidebarToggleIcon />}
           </button>
-          {headerTitle ? <div className="ai-page-header-title">{headerTitle}</div> : <div className="ai-page-header-spacer" />}
+          <AiConversationHeading
+            sessionName={headerTitle}
+            agentName={showHistoryAgentHeading ? currentConversationCustomAgentName : undefined}
+            avatarUrl={showHistoryAgentHeading ? currentConversationCustomAgentAvatarUrl : undefined}
+          />
           <AiConversationHeaderActions
             showCustomAgentMoreAction={canShowCurrentConversationCustomAgentActions}
             showSessionMoreAction={canShowSessionMoreAction}
@@ -2620,7 +2630,7 @@ export default function AIPage({
       {showCustomAgentConversationPage && (
         <AiCustomAgentConversationPage
           agentName={customAgentConversationDetail?.agent_name || activeAgent?.agentName || ''}
-          headerTitle={customAgentConversationHeaderTitle}
+          sessionName={headerTitle}
           avatarUrl={customAgentConversationDetail?.avatar_url || null}
           canEdit={canEditCustomAgentConversation}
           canSubmit={canSend}

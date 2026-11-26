@@ -3,6 +3,7 @@ import { SetOutline } from 'antd-mobile-icons'
 import type { ChatMessage } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
+import { AiConversationHeading } from './AiConversationHeading'
 
 type AiCustomAgentConversationQuestion = {
   id: string
@@ -12,7 +13,7 @@ type AiCustomAgentConversationQuestion = {
 
 type AiCustomAgentConversationPageProps = {
   agentName: string
-  headerTitle?: string
+  sessionName?: string
   avatarUrl?: string | null
   description: string
   questions: AiCustomAgentConversationQuestion[]
@@ -37,7 +38,7 @@ type AiCustomAgentConversationPageProps = {
 
 export function AiCustomAgentConversationPage({
   agentName,
-  headerTitle = '',
+  sessionName,
   avatarUrl,
   description,
   questions,
@@ -59,7 +60,7 @@ export function AiCustomAgentConversationPage({
   onSuggestionClick,
   onPlusClick,
 }: AiCustomAgentConversationPageProps) {
-  const normalizedHeaderTitle = headerTitle.trim()
+  const heading = <AiConversationHeading sessionName={sessionName} agentName={agentName} avatarUrl={avatarUrl} />
 
   if (loading || error) {
     return (
@@ -75,7 +76,7 @@ export function AiCustomAgentConversationPage({
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
-          <div className="ai-custom-agent-conversation-header-title">{normalizedHeaderTitle}</div>
+          {heading}
           <div aria-hidden="true" className="ai-agent-config-header-spacer" />
         </div>
 
@@ -99,7 +100,7 @@ export function AiCustomAgentConversationPage({
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </button>
-        <div className="ai-custom-agent-conversation-header-title">{normalizedHeaderTitle}</div>
+        {heading}
         {canEdit ? (
           <button
             aria-label="编辑自定义智能体"

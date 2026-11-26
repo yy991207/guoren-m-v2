@@ -40,7 +40,9 @@ it('切会话时禁用设置，旧会话迟到的详情不能覆盖新会话；�
   expect(vi.mocked(getChatSession).mock.calls[0][1]?.aborted).toBe(true)
   await act(async () => resolveOld({ ...detail, session_id: 'a', model: 'model-a', thinking_level: 'low' }))
   expect(result.current.modelControls).toMatchObject({ model: 'model-b', thinkingLevel: 'medium' })
+  expect(result.current.restoredSessionHeader?.session_id).toBe('b')
   act(() => result.current.startNewChat())
+  expect(result.current.restoredSessionHeader).toBeNull()
   await waitFor(() => expect(result.current.modelControls.model).toBeNull())
   expect(result.current.modelControls.thinkingLevel).toBe('high')
 })
@@ -51,10 +53,12 @@ it('即使后台已有消息快照，仍然从详情恢复模型，后台续聊�
     unsubscribe: vi.fn(), startStream: vi.fn(), resumeStream: vi.fn(), stopStream: vi.fn(), destroy: vi.fn(),
   }
   vi.mocked(createChatStreamBridge).mockReturnValue(bridge)
-  vi.mocked(getChatSession).mockResolvedValue({ ...detail, session_id: 'a' })
+  const agentInfo = { agent_name: '学习助手', avatar_url: '/agent.png' }
+  vi.mocked(getChatSession).mockResolvedValue({ ...detail, session_id: 'a', agent_id: 'agent-1', agent_info: agentInfo })
   const { result } = renderRuntime()
   await waitFor(() => expect(result.current.modelBusy).toBe(false))
   expect(getChatSession).toHaveBeenCalledOnce()
+  expect(result.current.restoredSessionHeader).toMatchObject({ session_id: 'a', session_name: '历史对话', agent_info: agentInfo })
   expect(result.current.modelControls).toMatchObject({ model: 'model-b', thinkingLevel: 'medium' })
   await act(() => result.current.submitPrompt('继续'))
   const [sent] = vi.mocked(bridge.startStream).mock.calls[0]

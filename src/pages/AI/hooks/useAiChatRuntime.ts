@@ -197,6 +197,7 @@ export function useAiChatRuntime() {
   const preparingPromptRef = useRef(false)
 
   const [sessions, setSessions] = useState<ChatSession[]>([])
+  const [restoredHeader, setRestoredHeader] = useState<Pick<ChatSession, 'session_id' | 'session_name' | 'agent_id' | 'agent_info'> | null>(null)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [inputValue, setInputValue] = useState('')
   const [draftAttachments, setDraftAttachments] = useState<ChatAttachment[]>([])
@@ -407,8 +408,7 @@ export function useAiChatRuntime() {
     if (signal.aborted || currentSessionIdRef.current !== sessionId) return
     const restoredAgentName = session.agent_info?.agent_name?.trim() || ''
 
-    // 刷新后只剩 sessionId，需要从会话详情把自定义智能体上下文补回来，
-    // 这样顶部标题和同一会话里的继续对话才能保持一致。
+    // 刷新后从会话详情恢复智能体上下文，供后续继续对话。
     if (session.agent_id && restoredAgentName) {
       setActiveAgent({
         agentId: session.agent_id,
@@ -717,7 +717,11 @@ export function useAiChatRuntime() {
     // 即使消息可从快照恢复，模型配置仍来自同一次会话详情查询。
     const detail = getChatSession(routeSessionId, signal)
     const settings = detail.then((session) => {
-      if (!signal.aborted && currentSessionIdRef.current === routeSessionId) restoreHistory(session.model, session.thinking_level)
+      if (signal.aborted || currentSessionIdRef.current !== routeSessionId) return
+      restoreHistory(session.model, session.thinking_level)
+      // 即使历史项不在列表、消息由后台复原，页头也使用同一份会话详情。
+      const { session_id, session_name, agent_id, agent_info } = session
+      setRestoredHeader({ session_id, session_name, agent_id, agent_info })
     }).finally(() => { if (!signal.aborted) setModelSessionId(routeSessionId) })
     void Promise.all([restoreSession(routeSessionId, detail, signal), settings]).catch((error) => {
       if (!signal.aborted) setRequestError(error instanceof Error ? error.message : '恢复会话失败')
@@ -790,6 +794,7 @@ export function useAiChatRuntime() {
     modelBusy: restoringModel || preparingPrompt,
     messages,
     requestError,
+    restoredSessionHeader: restoredHeader?.session_id === routeSessionId ? restoredHeader : null,
     routeSessionId,
     selectedArtifact,
     sessions,
