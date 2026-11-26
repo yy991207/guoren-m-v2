@@ -1,9 +1,12 @@
 import { CloseOutline } from 'antd-mobile-icons'
+import { useState } from 'react'
 import type { SkillSummaryItem, UserSkillGroups } from '../../../services/skills'
+import { filterSkillItems } from '../utils/skillDisplay'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiLoading } from './AiLoading'
 import { AiSearchField } from './AiSearchField'
 import { AiSkillCard } from './AiSkillCard'
+import { AiSectionTabs } from './AiSectionTabs'
 import './AiChatSkillPickerSheet.css'
 
 type AiChatSkillPickerSheetProps = {
@@ -17,11 +20,37 @@ type AiChatSkillPickerSheetProps = {
   onClose: () => void
 }
 
-const groups = [['created', '我创建的'], ['added', '我添加的']] as const
+const categories = [{ key: 'added', label: '我添加的' }, { key: 'created', label: '我创建的' }] as const
 
 export function AiChatSkillPickerSheet({
   skills, searchValue, selectedSkillName, loading, error, onSearchChange, onSelect, onClose,
 }: AiChatSkillPickerSheetProps) {
+  const [category, setCategory] = useState<keyof UserSkillGroups>('added')
+  const visibleSkills = filterSkillItems(skills[category], searchValue)
+
+  const renderSkills = () => {
+    if (loading) return <AiLoading fill message="技能加载中…" />
+    if (error) return <div className="ai-chat-skill-picker-status" role="status">{error}</div>
+    if (!visibleSkills.length) {
+      return <div className="ai-chat-skill-picker-status">{searchValue.trim() ? '暂无匹配技能' : '暂无技能'}</div>
+    }
+    return (
+      <div className="ai-skill-list">
+        {visibleSkills.map(skill => {
+          const current = selectedSkillName === (skill.skillName || skill.id)
+          return (
+            <AiSkillCard
+              highlighted={current}
+              key={skill.id}
+              open={{ label: `选择技能 ${skill.title}`, icon: 'use', current: current || undefined, run: () => onSelect(skill) }}
+              skill={skill}
+            />
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <AiBottomSheet className="ai-chat-skill-picker-sheet" label="选择技能" nativeModal onClose={onClose}>
       <div className="ai-chat-skill-picker-toolbar">
@@ -34,31 +63,14 @@ export function AiChatSkillPickerSheet({
         <AiSearchField label="搜索可用技能" placeholder="搜索" value={searchValue} onChange={onSearchChange} />
       </div>
 
-      <div className="ai-chat-skill-picker-list">
-        {loading ? <AiLoading fill message="技能加载中…" /> : null}
-        {!loading && error && <div className="ai-chat-skill-picker-status" role="status">{error}</div>}
-        {!loading && !error && groups.map(([key, label]) => (
-          <section aria-label={label} className="ai-chat-skill-picker-group" key={key}>
-            <h3>{label}</h3>
-            {skills[key].length === 0 ? (
-              <div className="ai-chat-skill-picker-status">{searchValue.trim() ? '暂无匹配技能' : '暂无技能'}</div>
-            ) : (
-              <div className="ai-skill-list">
-                {skills[key].map(skill => {
-                  const current = selectedSkillName === (skill.skillName || skill.id)
-                  return (
-                    <AiSkillCard
-                      highlighted={current}
-                      key={skill.id}
-                      open={{ label: `选择技能 ${skill.title}`, icon: 'use', current: current || undefined, run: () => onSelect(skill) }}
-                      skill={skill}
-                    />
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        ))}
+      <div className="ai-skill-picker-tabs ai-chat-skill-picker-results">
+        <AiSectionTabs
+          label="技能分类"
+          value={category}
+          variant="picker"
+          tabs={categories.map(tab => ({ ...tab, content: tab.key === category ? renderSkills() : null }))}
+          onChange={setCategory}
+        />
       </div>
     </AiBottomSheet>
   )

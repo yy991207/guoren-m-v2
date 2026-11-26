@@ -22,20 +22,26 @@ import type { CustomAgentDebugRequest } from '../../../services/customAgentDebug
 import { streamCustomAgentDebug } from '../../../services/customAgentDebug'
 import {
   fetchAddedSkills,
-  fetchCustomAgentRecommendedSkills,
   fetchCreatedSkills,
   installClawhubSkill,
   type RecommendSkillsRequest,
   type SkillSummaryItem,
 } from '../../../services/skills'
+import { useRecommendedSkillResult, type RecommendedSkillCache } from '../hooks/useRecommendedSkillCache'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
 import { AiPublishSettings } from './AiPublishSettings'
+import { AiSectionTabs } from './AiSectionTabs'
 import { AiSelectionSheet } from './AiSelectionSheet'
 import { AiSkillCard } from './AiSkillCard'
 import { AiWorkspaceComposer } from './AiWorkspaceComposer'
 
 type AiAgentConfigTabKey = 'debug' | 'config'
-type AiSkillSheetView = 'added' | 'created' | 'recommended'
+const skillSheetCategories = [
+  { key: 'added', label: '我添加的' },
+  { key: 'created', label: '我创建的' },
+  { key: 'recommended', label: '技能推荐' },
+] as const
+type AiSkillSheetView = (typeof skillSheetCategories)[number]['key']
 
 export type AiAgentSelectedSkill = Pick<SkillSummaryItem, 'id' | 'skillName' | 'title' | 'description' | 'iconUrl' | 'source' | 'tags'>
 
@@ -66,6 +72,7 @@ type AiAgentConfigPageProps = {
   avatarUrl?: string | null
   draft: AiAgentConfigDraft
   mode?: 'create' | 'edit'
+  recommendedSkillCache: RecommendedSkillCache
   onBack: () => void
   onClose?: () => void
   onDraftChange: (draft: AiAgentConfigDraft) => void
@@ -277,6 +284,7 @@ export function AiAgentConfigPage({
   avatarUrl = null,
   draft,
   mode = 'create',
+  recommendedSkillCache,
   onBack,
   onClose,
   onDraftChange,
@@ -298,15 +306,12 @@ export function AiAgentConfigPage({
   const [knowledgeSearchValue, setKnowledgeSearchValue] = useState('')
   const [addedSkillOptions, setAddedSkillOptions] = useState<AiAgentSelectedSkill[]>([])
   const [createdSkillOptions, setCreatedSkillOptions] = useState<AiAgentSelectedSkill[]>([])
-  const [recommendedSkillOptions, setRecommendedSkillOptions] = useState<AiAgentSelectedSkill[]>([])
   const [knowledgeOptions, setKnowledgeOptions] = useState<KnowledgeSpaceOption[]>([])
   const [addedSkillsLoading, setAddedSkillsLoading] = useState(false)
   const [createdSkillsLoading, setCreatedSkillsLoading] = useState(false)
-  const [recommendedSkillsLoading, setRecommendedSkillsLoading] = useState(false)
   const [knowledgeLoading, setKnowledgeLoading] = useState(false)
   const [addedSkillsError, setAddedSkillsError] = useState('')
   const [createdSkillsError, setCreatedSkillsError] = useState('')
-  const [recommendedSkillsError, setRecommendedSkillsError] = useState('')
   const [knowledgeError, setKnowledgeError] = useState('')
   const [recommendedInstallingSkillId, setRecommendedInstallingSkillId] = useState('')
   const [agentAvatarUrl, setAgentAvatarUrl] = useState(avatarUrl?.trim() || '')
@@ -368,6 +373,8 @@ export function AiAgentConfigPage({
     description: draft.description.trim(),
     agent_prompt: draft.instruction.trim() || null,
   }), [draft.agentName, draft.description, draft.instruction])
+  const recommendations = useRecommendedSkillResult(recommendedSkillCache, showSkillSheet && skillSheetView === 'recommended', agentId, recommendSkillsPayload)
+  const recommendedSkillOptions = useMemo(() => recommendations.items.map(normalizeSelectedSkill), [recommendations.items])
 
   const handleAgentAvatarChange = useCallback(async (file: File) => {
     setAgentAvatarUploading(true)
@@ -387,12 +394,9 @@ export function AiAgentConfigPage({
       return
     }
 
-    setSkillSheetView('added')
     createdSkillsRequestedRef.current = false
     setCreatedSkillOptions([])
     setCreatedSkillsError('')
-    setRecommendedSkillOptions([])
-    setRecommendedSkillsError('')
 
     const controller = new AbortController()
 
@@ -427,42 +431,6 @@ export function AiAgentConfigPage({
       controller.abort()
     }
   }, [showSkillSheet])
-
-  useEffect(() => {
-    if (!showSkillSheet || skillSheetView !== 'recommended') {
-      return
-    }
-
-    const controller = new AbortController()
-
-    async function loadRecommendedSkillOptions() {
-      setRecommendedSkillsLoading(true)
-      setRecommendedSkillsError('')
-
-      try {
-        const skills = await fetchCustomAgentRecommendedSkills(recommendSkillsPayload, controller.signal)
-
-        if (!controller.signal.aborted) {
-          setRecommendedSkillOptions(skills.map((skill) => normalizeSelectedSkill(skill)))
-        }
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          setRecommendedSkillOptions([])
-          setRecommendedSkillsError(error instanceof Error ? error.message : '获取推荐技能失败')
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setRecommendedSkillsLoading(false)
-        }
-      }
-    }
-
-    void loadRecommendedSkillOptions()
-
-    return () => {
-      controller.abort()
-    }
-  }, [recommendSkillsPayload, showSkillSheet, skillSheetView])
 
   useEffect(() => {
     if (!showSkillSheet || skillSheetView !== 'created' || createdSkillsRequestedRef.current) {
@@ -634,18 +602,6 @@ export function AiAgentConfigPage({
     }
   }, [isSkillSelected, onSkillInstalled, recommendedInstallingSkillId, recommendedSkillOptions, selectedSkills, updateDraft])
 
-  const activeSkillSheetOptions = skillSheetView === 'added'
-    ? addedSkillOptions
-    : createdSkillOptions
-  const activeSkillSheetLoading = skillSheetView === 'added'
-    ? addedSkillsLoading
-    : createdSkillsLoading
-  const activeSkillSheetError = skillSheetView === 'added'
-    ? addedSkillsError
-    : createdSkillsError
-  const activeSkillSheetEmptyText = skillSheetView === 'added'
-    ? '暂无我添加的技能'
-    : '暂无我创建的技能'
   const renderSkillSheetItems = (items: AiAgentSelectedSkill[], installFromRecommended = false) => (
     <div className="ai-skill-list">
       {items.map((skill) => {
@@ -673,6 +629,18 @@ export function AiAgentConfigPage({
       })}
     </div>
   )
+  const renderSkillCategory = (category: AiSkillSheetView) => {
+    const list = category === 'recommended'
+      ? { items: recommendedSkillOptions, loading: recommendations.loading, error: recommendations.error, empty: '暂无推荐技能' }
+      : category === 'added'
+        ? { items: addedSkillOptions, loading: addedSkillsLoading, error: addedSkillsError, empty: '暂无我添加的技能' }
+        : { items: createdSkillOptions, loading: createdSkillsLoading, error: createdSkillsError, empty: '暂无我创建的技能' }
+    if (list.loading) return <AiLoading fill message="加载中…" />
+    if (list.error) return <div className="ai-selection-sheet-status is-error" role="alert">{list.error}</div>
+    if (!list.items.length) return <div className="ai-selection-sheet-status">{list.empty}</div>
+    return renderSkillSheetItems(list.items, category === 'recommended')
+  }
+
   const visiblePresetQuestions = presetQuestions.filter((item) => item.question.trim())
   const canSubmitDebugPrompt = useMemo(() => {
     return Boolean(debugInput.trim()) && !debugIsResponding && !debugIsStopping
@@ -1082,7 +1050,10 @@ export function AiAgentConfigPage({
           <button
             className="ai-agent-config-link-btn"
             type="button"
-            onClick={() => setShowSkillSheet(true)}
+            onClick={() => {
+              setSkillSheetView('added')
+              setShowSkillSheet(true)
+            }}
           >
             添加
           </button>
@@ -1309,57 +1280,14 @@ export function AiAgentConfigPage({
         onSearchChange={() => {}}
         onSelect={() => {}}
       >
-        <div className="ai-selection-sheet-section">
-          <div className="ai-selection-sheet-tabs" role="tablist" aria-label="技能分类">
-            <button
-              aria-pressed={skillSheetView === 'added'}
-              className={`ai-selection-sheet-tab${skillSheetView === 'added' ? ' is-active' : ''}`}
-              type="button"
-              onClick={() => setSkillSheetView('added')}
-            >
-              我添加的
-            </button>
-            <button
-              aria-pressed={skillSheetView === 'created'}
-              className={`ai-selection-sheet-tab${skillSheetView === 'created' ? ' is-active' : ''}`}
-              type="button"
-              onClick={() => setSkillSheetView('created')}
-            >
-              我创建的
-            </button>
-            <button
-              aria-pressed={skillSheetView === 'recommended'}
-              className={`ai-selection-sheet-tab${skillSheetView === 'recommended' ? ' is-active' : ''}`}
-              type="button"
-              onClick={() => setSkillSheetView('recommended')}
-            >
-              技能推荐
-            </button>
-          </div>
-
-          {skillSheetView === 'recommended' ? (
-            <>
-              {recommendedSkillsLoading ? <AiLoading fill message="加载中…" /> : null}
-              {!recommendedSkillsLoading && recommendedSkillsError ? <div className="ai-selection-sheet-status is-error">{recommendedSkillsError}</div> : null}
-              {!recommendedSkillsLoading && !recommendedSkillsError && recommendedSkillOptions.length === 0 ? (
-                <div className="ai-selection-sheet-status">暂无推荐技能</div>
-              ) : null}
-              {!recommendedSkillsLoading && !recommendedSkillsError && recommendedSkillOptions.length > 0
-                ? renderSkillSheetItems(recommendedSkillOptions, true)
-                : null}
-            </>
-          ) : (
-            <>
-              {activeSkillSheetLoading ? <AiLoading fill message="加载中…" /> : null}
-              {!activeSkillSheetLoading && activeSkillSheetError ? <div className="ai-selection-sheet-status is-error">{activeSkillSheetError}</div> : null}
-              {!activeSkillSheetLoading && !activeSkillSheetError && activeSkillSheetOptions.length === 0 ? (
-                <div className="ai-selection-sheet-status">{activeSkillSheetEmptyText}</div>
-              ) : null}
-              {!activeSkillSheetLoading && !activeSkillSheetError && activeSkillSheetOptions.length > 0
-                ? renderSkillSheetItems(activeSkillSheetOptions)
-                : null}
-            </>
-          )}
+        <div className="ai-skill-picker-tabs">
+          <AiSectionTabs
+            label="技能分类"
+            value={skillSheetView}
+            variant="picker"
+            tabs={skillSheetCategories.map(tab => ({ ...tab, content: tab.key === skillSheetView ? renderSkillCategory(tab.key) : null }))}
+            onChange={setSkillSheetView}
+          />
         </div>
       </AiSelectionSheet>
 

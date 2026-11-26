@@ -80,3 +80,52 @@
   background: #e7e9ec;
   font-weight: 600;
 }
+
+.ai-skill-picker-tabs {
+  display: flex;
+  flex-direction: column;
+  block-size: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+.ai-skill-picker-tabs > [role='tabpanel']:not([hidden]) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  padding-block: 2px;
+}
+
+.ai-section-tabs[data-variant='picker'] {
+  flex: none;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ai-section-tabs[data-variant='picker'] > .ai-section-tabs-button {
+  flex: none;
+  min-height: 36px;
+  margin-inline-start: 0;
+  padding: 6px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: #f1f3f6;
+  color: #667085;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ai-section-tabs[data-variant='picker'] > .ai-section-tabs-button::before { content: none; }
+
+.ai-section-tabs[data-variant='picker'] > .ai-section-tabs-button[aria-selected='true'] {
+  background: #eef3ff;
+  border-color: rgb(74 124 255 / 18%);
+  color: var(--ai-accent-color);
+}

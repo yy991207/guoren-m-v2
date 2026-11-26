@@ -340,21 +340,28 @@ it('对话内用底部弹窗搜索和选用技能，关闭不动草稿，选中�
 
   const sheet = openSkills()
   const search = within(sheet).getByRole('searchbox', { name: '搜索可用技能' })
-  const added = within(await within(sheet).findByRole('region', { name: '我添加的' }))
-  const created = within(within(sheet).getByRole('region', { name: '我创建的' }))
-  expect(created.getAllByRole('article')).toHaveLength(26)
-  expect(created.getByRole('article', { name: '自建技能 25' })).toBeVisible()
-  const lessonCard = added.getByRole('article', { name: '教案助手' })
+  const tabs = within(within(sheet).getByRole('tablist', { name: '技能分类' }))
+  const added = within(await within(sheet).findByRole('tabpanel', { name: '我添加的' }))
+  expect(tabs.getByRole('tab', { name: '我添加的' })).toHaveAttribute('aria-selected', 'true')
+  expect(within(sheet).queryByRole('tabpanel', { name: '我创建的' })).not.toBeInTheDocument()
+  const lessonCard = await added.findByRole('article', { name: '教案助手' })
   expect(lessonCard).toHaveClass('ai-skill-card')
   const avatar = within(lessonCard).getByRole('img', { name: '教案助手头像' })
   expect(avatar.querySelector('img')).toHaveAttribute('src', '/lesson-avatar.png')
   fireEvent.error(avatar.querySelector('img')!)
   expect(avatar).toHaveTextContent('教')
+  fireEvent.click(tabs.getByRole('tab', { name: '我创建的' }))
+  const created = within(within(sheet).getByRole('tabpanel', { name: '我创建的' }))
+  expect(created.getAllByRole('article')).toHaveLength(26)
+  expect(created.getByRole('article', { name: '自建技能 25' })).toBeVisible()
   expect(created.getByRole('img', { name: '习题助手头像' })).toHaveTextContent('习')
   await act(async () => { resolveOldList(Response.json({ data: { skills: [{ name: 'old-skill', chinese_name: '旧数据' }] } })) })
   expect(within(sheet).queryByText('旧数据')).not.toBeInTheDocument()
   fireEvent.change(search, { target: { value: '教案' } })
-  expect(within(sheet).queryByText('习题助手')).not.toBeInTheDocument()
+  expect(created.getByText('暂无匹配技能')).toBeVisible()
+  expect(within(sheet).queryByText('教案助手')).not.toBeInTheDocument()
+  fireEvent.click(tabs.getByRole('tab', { name: '我添加的' }))
+  expect(search).toHaveValue('教案')
   expect(signals).toHaveLength(2)
   fireEvent.click(within(sheet).getByRole('button', { name: /教案助手/ }))
   expect(sheet).not.toBeInTheDocument()
@@ -442,6 +449,7 @@ it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、�
     enabled_skills: [{ skill_name: 'notes', chinese_name: '笔记助手', icon_url: '/notes.png' }], knowledge_spaces: [], preset_questions: [],
   }
   const write = vi.fn<(path: string, body?: BodyInit | null) => void>()
+  const recommendedRequests: string[] = []
   vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
     const path = String(url)
     if (path.endsWith('/chat/sessions/study')) return Response.json(session)
@@ -450,9 +458,12 @@ it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、�
     if (path === '/api/v1/users/agent-skill-card-test/skills') return Response.json({ data: {
       skills: [{ skill_name: 'lesson', chinese_name: '教案助手', icon_url: '/lesson.png' }],
     } })
-    if (path === '/api/v1/custom-agents/skills/recommend') return Response.json({ data: {
-      skills: [{ skill_name: 'search', chinese_name: '搜索助手', source: 'clawhub', icon_url: '/search.png' }],
-    } })
+    if (path === '/api/v1/custom-agents/skills/recommend') {
+      recommendedRequests.push(JSON.parse(String(options?.body)).agent_prompt)
+      return Response.json({ data: {
+        skills: [{ skill_name: 'search', chinese_name: '搜索助手', source: 'clawhub', icon_url: '/search.png' }],
+      } })
+    }
     if (options?.method === 'PUT' || options?.method === 'POST') write(path, options.body)
     return Response.json({ success: true, data: {} })
   })
@@ -477,13 +488,34 @@ it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、�
   fireEvent.click(add)
   expect(add).toHaveAttribute('aria-pressed', 'true')
   expect(write).not.toHaveBeenCalled()
-  fireEvent.click(within(sheet).getByRole('button', { name: '技能推荐' }))
-  const recommended = await within(sheet).findByRole('article', { name: '搜索助手' })
+  const showRecommendations = (currentSheet: HTMLElement) => fireEvent.click(within(currentSheet).getByRole('tab', { name: '技能推荐' }))
+  const closeSkillPicker = (currentSheet: HTMLElement) => fireEvent.click(within(currentSheet).getByRole('button', { name: '关闭选择 Skills 服务' }))
+  const reopen = () => {
+    fireEvent.click(within(skillsSection).getByRole('button', { name: '添加' }))
+    return screen.getByRole('dialog', { name: '选择 Skills 服务' })
+  }
+  showRecommendations(sheet)
+  await within(sheet).findByRole('article', { name: '搜索助手' })
+  fireEvent.click(within(sheet).getByRole('tab', { name: '我添加的' }))
+  showRecommendations(sheet)
+  expect(within(sheet).getByRole('article', { name: '搜索助手' })).toBeVisible()
+  closeSkillPicker(sheet)
+  const reopened = reopen()
+  showRecommendations(reopened)
+  expect(within(reopened).getByRole('article', { name: '搜索助手' })).toBeVisible()
+  expect(recommendedRequests).toEqual(['辅导学习'])
+  closeSkillPicker(reopened)
+
+  fireEvent.change(screen.getByRole('textbox', { name: '指令' }), { target: { value: '推荐搜索和整理工具' } })
+  const changed = reopen()
+  showRecommendations(changed)
+  const recommended = await within(changed).findByRole('article', { name: '搜索助手' })
+  expect(recommendedRequests).toEqual(['辅导学习', '推荐搜索和整理工具'])
   checkAvatar(recommended, '搜索助手', '/search.png')
   fireEvent.click(within(recommended).getByRole('button', { name: '添加 ClawHub 技能 搜索助手' }))
-  await within(sheet).findByRole('button', { name: '配置技能 搜索助手', pressed: true })
+  await within(changed).findByRole('button', { name: '配置技能 搜索助手', pressed: true })
   expect(write.mock.calls.map(([path]) => path)).toEqual(['/api/v1/skills/clawhub/search/install'])
-  fireEvent.click(within(sheet).getByRole('button', { name: '关闭选择 Skills 服务' }))
+  closeSkillPicker(changed)
   checkAvatar(screen.getByRole('article', { name: '教案助手' }), '教案助手', '/lesson.png')
   checkAvatar(screen.getByRole('article', { name: '搜索助手' }), '搜索助手', '/search.png')
   fireEvent.click(screen.getByRole('button', { name: '发布' }))

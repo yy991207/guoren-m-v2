@@ -3,7 +3,7 @@ import './AiSectionTabs.css'
 
 type AiSectionTabsProps<Key extends string> = {
   label: string
-  variant?: 'segmented' | 'chips'
+  variant?: 'segmented' | 'chips' | 'picker'
   tabs: ReadonlyArray<{ key: Key; label: string; content: ReactNode }>
   value: NoInfer<Key>
   onChange: (value: NoInfer<Key>) => void

@@ -3457,51 +3457,6 @@
   gap: 10px;
 }
 
-.ai-selection-sheet-section:has(> .ai-loading[data-fill]) {
-  display: flex;
-  flex-direction: column;
-  min-block-size: 100%;
-}
-
-.ai-selection-sheet-section + .ai-selection-sheet-section {
-  margin-top: 18px;
-}
-
-.ai-selection-sheet-tabs {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.ai-selection-sheet-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-.ai-selection-sheet-tab {
-  padding: 8px 14px;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  background: #f3f5f8;
-  color: #687385;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 14px;
-  line-height: 1.4;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.ai-selection-sheet-tab.is-active {
-  border-color: rgba(74, 124, 255, 0.18);
-  background: #eef3ff;
-  color: #336dff;
-}
-
 .ai-selection-sheet-item {
   display: flex;
   align-items: center;

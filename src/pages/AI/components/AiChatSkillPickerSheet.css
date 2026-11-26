@@ -52,27 +52,7 @@
   outline-offset: -2px;
 }
 
-.ai-chat-skill-picker-list {
-  flex: 1 1 0;
-  min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding-block: 2px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.ai-chat-skill-picker-group { min-width: 0; flex: none; }
-
-.ai-chat-skill-picker-group h3 {
-  margin: 2px 0 8px;
-  color: #475263;
-  font-size: 13px;
-  line-height: 1.5;
-  font-weight: 650;
-}
+.ai-chat-skill-picker-results { flex: 1 1 0; }
 
 .ai-chat-skill-picker-status {
   padding-block: 14px;

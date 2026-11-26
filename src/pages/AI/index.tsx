@@ -84,6 +84,7 @@ import { AiNameAvatar } from './components/AiNameAvatar'
 import AiSidebarLibraryPage from './components/AiSidebarLibraryPage'
 import AiSkillDetailPage from './components/AiSkillDetailPage'
 import { useSkillCommunity } from './hooks/useSkillCommunity'
+import { useRecommendedSkillCache } from './hooks/useRecommendedSkillCache'
 import { useDiscoverAgents } from './hooks/useDiscoverAgents'
 import { resolveArtifactPreviewUrl, useAiChatRuntime, type ActiveAgentContext } from './hooks/useAiChatRuntime'
 import {
@@ -421,7 +422,8 @@ export default function AIPage({
   } = useAiChatRuntime()
 
   const displayName = useMemo(() => getDisplayName(), [])
-  const currentUserId = useMemo(() => getChatUserId(), [])
+  const currentUserId = getChatUserId()
+  const recommendedSkillCache = useRecommendedSkillCache(currentUserId)
   const artifactPreviewEntry = useMemo(() => buildArtifactPreviewEntry(selectedArtifact), [selectedArtifact])
   const scrollerRef = useRef<HTMLDivElement | null>(null)
   const workspaceScrollRef = useRef<{ sessionId: string | null; top: number; follow: boolean } | null>(null)
@@ -972,10 +974,6 @@ export default function AIPage({
     added: filterSkillItems(addedSkills, mySkillSearchValue),
     created: filterSkillItems(createdSkills, mySkillSearchValue),
   }), [addedSkills, createdSkills, mySkillSearchValue])
-  const visibleSelectableSkills = useMemo(() => ({
-    added: filterSkillItems(userSkills.added, skillSelectorSearchValue),
-    created: filterSkillItems(userSkills.created, skillSelectorSearchValue),
-  }), [skillSelectorSearchValue, userSkills])
   const discoverSections = useMemo<Array<{
     key: AgentCategoryKey
     title: string
@@ -2341,6 +2339,7 @@ export default function AIPage({
           avatarUrl={agentConfigAvatarUrl}
           draft={agentConfigDraft}
           mode={agentConfigMode}
+          recommendedSkillCache={recommendedSkillCache}
           onBack={() => setShowAgentConfigPage(false)}
           onClose={agentConfigReturnTarget === 'custom-conversation' || agentConfigReturnTarget === 'main-conversation'
             ? () => setShowAgentConfigPage(false)
@@ -2370,7 +2369,7 @@ export default function AIPage({
           loading={userSkillsLoading}
           searchValue={skillSelectorSearchValue}
           selectedSkillName={selectedSkillName}
-          skills={visibleSelectableSkills}
+          skills={userSkills}
           onClose={() => setShowSkillSelectorSheet(false)}
           onSearchChange={setSkillSelectorSearchValue}
           onSelect={applySkillItem}
