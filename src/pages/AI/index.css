@@ -2207,11 +2207,13 @@
   flex: none;
   width: 100%;
   max-width: 520px;
-  margin: auto;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 28px 0 8px;
+  /* 按屏幕高度留出上方空间，不随推荐列表变长重新居中。 */
+  padding-block-start: clamp(28px, calc(50svh - 17.5rem), 216px);
 }
 
 .ai-agent-chat-preview-avatar {

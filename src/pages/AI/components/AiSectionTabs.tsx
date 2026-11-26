@@ -11,6 +11,9 @@ type AiSectionTabsProps<Key extends string> = {
 
 export function AiSectionTabs<Key extends string>({ label, variant = 'segmented', tabs, value, onChange }: AiSectionTabsProps<Key>) {
   const id = useId()
+  // 用户填写的分类名称可能带空格，控件关联用下标生成，不把名称写进标识。
+  const tabId = (index: number) => `${id}-tab-${index}`
+  const panelId = (index: number) => `${id}-panel-${index}`
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let next: number
@@ -31,10 +34,10 @@ export function AiSectionTabs<Key extends string>({ label, variant = 'segmented'
       <div aria-label={label} className="ai-section-tabs" data-variant={variant} role="tablist">
         {tabs.map((tab, index) => (
           <button
-            aria-controls={`${id}-panel-${tab.key}`}
+            aria-controls={panelId(index)}
             aria-selected={tab.key === value}
             className="ai-section-tabs-button"
-            id={`${id}-tab-${tab.key}`}
+            id={tabId(index)}
             key={tab.key}
             role="tab"
             tabIndex={tab.key === value ? 0 : -1}
@@ -44,11 +47,11 @@ export function AiSectionTabs<Key extends string>({ label, variant = 'segmented'
           >{tab.label}</button>
         ))}
       </div>
-      {tabs.map(tab => (
+      {tabs.map((tab, index) => (
         <div
-          aria-labelledby={`${id}-tab-${tab.key}`}
+          aria-labelledby={tabId(index)}
           hidden={tab.key !== value}
-          id={`${id}-panel-${tab.key}`}
+          id={panelId(index)}
           key={tab.key}
           role="tabpanel"
           tabIndex={tab.key === value ? 0 : undefined}

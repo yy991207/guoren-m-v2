@@ -12,6 +12,33 @@
   font-weight: 700;
 }
 
+.ai-preset-questions-tabs > .ai-section-tabs {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.ai-preset-questions-tabs > .ai-section-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-preset-questions-tabs > .ai-section-tabs > .ai-section-tabs-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.ai-preset-questions-tabs > [role='tabpanel'] {
+  margin-block-start: 10px;
+}
+
 .ai-preset-questions-group + .ai-preset-questions-group {
   margin-top: 14px;
 }
@@ -32,6 +59,11 @@
   margin: 0;
   padding: 0;
   list-style: none;
+}
+
+.ai-preset-questions-tabs .ai-preset-questions-list {
+  flex-flow: column nowrap;
+  align-items: flex-start;
 }
 
 .ai-preset-questions-list li {
