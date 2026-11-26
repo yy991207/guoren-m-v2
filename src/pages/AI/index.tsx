@@ -135,6 +135,7 @@ function buildAgentContextFromDetail(detail: CustomAgentDetail): ActiveAgentCont
 function buildCustomAgentConversationQuestions(detail: CustomAgentDetail) {
   return detail.preset_questions.map((item, index) => ({
     id: `custom-agent-question-${detail.agent_id}-${index}`,
+    category: item.category,
     question: item.question,
     instruction: item.instruction?.trim() || item.question,
   }))
@@ -192,6 +193,7 @@ function buildDetailFromConfigDraft(
     agent_id: payload.agentId,
     creator_user_id: detail?.creator_user_id ?? '',
     agent_name: payload.agentName,
+    agent_category: payload.mode === 'edit' ? detail?.agent_category ?? null : null,
     description: payload.description,
     avatar_url: payload.avatarUrl,
     agent_prompt: draft.instruction.trim(),
@@ -206,11 +208,7 @@ function buildDetailFromConfigDraft(
       id: space.id,
       spaceName: space.name,
     })),
-    preset_questions: draft.presetQuestions.map((item) => ({
-      category: item.category,
-      question: item.question,
-      instruction: item.instruction,
-    })),
+    preset_questions: payload.presetQuestions ?? detail?.preset_questions ?? [],
     enable_web_search: draft.webSearchEnabled === true,
     is_active: detail?.is_active ?? true,
     is_public: draft.publishScope === 'public',
@@ -500,8 +498,8 @@ export default function AIPage({
     customAgentConversationDetail ? buildCustomAgentConversationQuestions(customAgentConversationDetail) : []
   ), [customAgentConversationDetail])
   const currentConversationCustomAgentQuestions = useMemo(() => (
-    currentConversationCustomAgentDetail ? buildCustomAgentConversationQuestions(currentConversationCustomAgentDetail) : []
-  ), [currentConversationCustomAgentDetail])
+    matchingAgentDetail ? buildCustomAgentConversationQuestions(matchingAgentDetail) : []
+  ), [matchingAgentDetail])
   const currentConversationCustomAgentSkills = useMemo(() => (
     currentConversationCustomAgentDetail ? buildCustomAgentDetailSkills(currentConversationCustomAgentDetail) : []
   ), [currentConversationCustomAgentDetail])
@@ -524,6 +522,8 @@ export default function AIPage({
   const canShowCurrentConversationCustomAgentActions = Boolean(currentConversationCustomAgentId)
     && isAiMainPageVisible
     && !showCustomAgentConversationPage
+  const isEditingCurrentConversationAgent = showAgentConfigPage && agentConfigMode === 'edit'
+    && agentConfigReturnTarget === 'main-conversation' && agentConfigAgentId === currentConversationCustomAgentId
   const canShowSessionMoreAction = Boolean(currentRouteSession) && !canShowCurrentConversationCustomAgentActions && isAiMainPageVisible
   const plusCardItems = [
     { key: 'file', label: '图片 / 文件' },
@@ -642,12 +642,13 @@ export default function AIPage({
   useEffect(() => {
     currentConversationCustomAgentAbortRef.current?.abort()
 
-    if (!currentConversationCustomAgentId || !canShowCurrentConversationCustomAgentActions) {
+    // 编辑期间保留同一个智能体的详情，发布时未提交的问题仍沿用原列表。
+    if (!currentConversationCustomAgentId || (!canShowCurrentConversationCustomAgentActions && !isEditingCurrentConversationAgent)) {
       setCurrentConversationCustomAgentDetail(null)
       return undefined
     }
 
-    if (currentConversationCustomAgentDetail?.agent_id === currentConversationCustomAgentId) {
+    if (currentConversationCustomAgentDetail?.agent_id === currentConversationCustomAgentId || !canShowCurrentConversationCustomAgentActions) {
       return undefined
     }
 
@@ -674,6 +675,7 @@ export default function AIPage({
     canShowCurrentConversationCustomAgentActions,
     currentConversationCustomAgentDetail?.agent_id,
     currentConversationCustomAgentId,
+    isEditingCurrentConversationAgent,
   ])
 
   const openAgentConfigPage = (
@@ -979,7 +981,7 @@ export default function AIPage({
     title: string
     items: DiscoverAgentItem[]
   }>>(() => ([
-    { key: 'subscribed', title: '订阅', items: groupedDiscoverAgents.subscribed },
+    { key: 'subscribed', title: '伙伴', items: groupedDiscoverAgents.subscribed },
     { key: 'official', title: '官方智能体', items: groupedDiscoverAgents.official },
     { key: 'enterprise', title: '企业智能体', items: groupedDiscoverAgents.enterprise },
     { key: 'collaboration', title: '共创', items: groupedDiscoverAgents.collaboration },

@@ -1,11 +1,8 @@
 import DisplayName from '../../../components/DisplayName'
+import type { AiAgentPresetQuestion } from '../utils/agentPresetQuestions'
 import { AiAgentAvatar } from './AiAgentAvatar'
+import { AiAgentPresetQuestionGroups } from './AiAgentPresetQuestionGroups'
 import { AiBottomSheet } from './AiBottomSheet'
-
-export type AiCustomAgentDetailQuestion = {
-  id: string
-  question: string
-}
 
 export type AiCustomAgentDetailSkill = {
   id: string
@@ -19,7 +16,7 @@ type AiCustomAgentDetailSheetProps = {
   description: string
   creatorUserId: string
   publishedAt?: string
-  questions: AiCustomAgentDetailQuestion[]
+  questions: AiAgentPresetQuestion[]
   configuredSkills: AiCustomAgentDetailSkill[]
   canEdit?: boolean
   onClose: () => void
@@ -60,7 +57,6 @@ export function AiCustomAgentDetailSheet({
   onOpenClone,
   onOpenEdit,
 }: AiCustomAgentDetailSheetProps) {
-  const visibleQuestions = questions.filter((item) => item.question.trim())
   const visibleSkills = configuredSkills.filter((item) => item.title.trim())
   const publishedDate = formatPublishedDate(publishedAt)
 
@@ -120,18 +116,7 @@ export function AiCustomAgentDetailSheet({
 
         {description ? <div className="ai-custom-agent-detail-sheet-desc">{description}</div> : null}
 
-        {visibleQuestions.length > 0 ? (
-          <section className="ai-custom-agent-detail-sheet-section">
-            <div className="ai-custom-agent-detail-sheet-section-title">推荐问题</div>
-            <div className="ai-custom-agent-detail-sheet-question-list">
-              {visibleQuestions.map((item) => (
-                <div className="ai-custom-agent-detail-sheet-question" key={item.id}>
-                  {item.question}
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
+        <AiAgentPresetQuestionGroups questions={questions} />
 
         {visibleSkills.length > 0 ? (
           <section className="ai-custom-agent-detail-sheet-section">

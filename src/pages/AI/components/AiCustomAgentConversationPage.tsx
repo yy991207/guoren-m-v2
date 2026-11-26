@@ -3,22 +3,17 @@ import type { ReactNode } from 'react'
 
 import type { ChatMessage } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
+import type { AiAgentPresetQuestion } from '../utils/agentPresetQuestions'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
 import { AiLoading } from './AiLoading'
 import { AiConversationHeading } from './AiConversationHeading'
-
-type AiCustomAgentConversationQuestion = {
-  id: string
-  question: string
-  instruction: string
-}
 
 type AiCustomAgentConversationPageProps = {
   agentName: string
   sessionName?: string
   avatarUrl?: string | null
   description: string
-  questions: AiCustomAgentConversationQuestion[]
+  questions: AiAgentPresetQuestion[]
   messages?: ChatMessage[]
   composer: ReactNode
   requestError?: string

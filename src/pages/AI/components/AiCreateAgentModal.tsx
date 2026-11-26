@@ -7,6 +7,7 @@ import {
   generateAgentTemplate,
   type AgentTemplateItem,
 } from '../../../services/agentTemplates'
+import type { AiAgentPresetQuestion } from '../utils/agentPresetQuestions'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiLoading } from './AiLoading'
 
@@ -17,12 +18,7 @@ type AiCreateAgentModalProps = {
     agentName: string
     description: string
     instruction: string
-    presetQuestions: Array<{
-      id: string
-      category?: string
-      question: string
-      instruction: string
-    }>
+    presetQuestions: AiAgentPresetQuestion[]
   }) => void
 }
 
@@ -232,6 +228,7 @@ export function AiCreateAgentModal({
         instruction: detail.agentPrompt,
         presetQuestions: detail.presetQuestions.map((item, index) => ({
           id: `template-${detail.templateId}-question-${index}`,
+          category: item.category,
           question: item.question,
           instruction: item.instruction,
         })),

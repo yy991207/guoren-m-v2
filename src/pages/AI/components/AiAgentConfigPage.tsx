@@ -8,7 +8,7 @@ import { applySquareAudit } from '../../../services/aiCommunity'
 import type { AgentPublishScope } from '../../../services/agents'
 import type { OrgUserItem } from '../../../services/aiOrgMembers'
 import type { ChatMessage } from '../../../services/chat/types'
-import { createCustomAgent, updateCustomAgent, uploadCustomAgentAvatar } from '../../../services/customAgents'
+import { createCustomAgent, updateCustomAgent, uploadCustomAgentAvatar, type CustomAgentPresetQuestion } from '../../../services/customAgents'
 import {
   appendErrorToAssistantMessage,
   appendReasoningDeltaToMessages,
@@ -28,7 +28,9 @@ import {
   type SkillSummaryItem,
 } from '../../../services/skills'
 import { useRecommendedSkillResult, type RecommendedSkillCache } from '../hooks/useRecommendedSkillCache'
+import { arePresetQuestionsUnchanged, serializePresetQuestions, validatePresetQuestions, type AiAgentPresetQuestion } from '../utils/agentPresetQuestions'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
+import { AiAgentPresetQuestionEditor } from './AiAgentPresetQuestionEditor'
 import { AiPublishSettings } from './AiPublishSettings'
 import { AiSectionTabs } from './AiSectionTabs'
 import { AiSelectionSheet } from './AiSelectionSheet'
@@ -36,6 +38,7 @@ import { AiSkillCard } from './AiSkillCard'
 import { AiWorkspaceComposer } from './AiWorkspaceComposer'
 
 type AiAgentConfigTabKey = 'debug' | 'config'
+const MAX_AGENT_INSTRUCTION_LENGTH = 1000
 const skillSheetCategories = [
   { key: 'added', label: '我添加的' },
   { key: 'created', label: '我创建的' },
@@ -44,13 +47,6 @@ const skillSheetCategories = [
 type AiSkillSheetView = (typeof skillSheetCategories)[number]['key']
 
 export type AiAgentSelectedSkill = Pick<SkillSummaryItem, 'id' | 'skillName' | 'title' | 'description' | 'iconUrl' | 'source' | 'tags'>
-
-export type AiAgentPresetQuestion = {
-  id: string
-  category?: string
-  question: string
-  instruction: string
-}
 
 export type AiAgentConfigDraft = {
   agentName: string
@@ -86,6 +82,7 @@ export type AiAgentPublishSuccessPayload = {
   agentName: string
   description: string
   avatarUrl: string
+  presetQuestions?: CustomAgentPresetQuestion[]
 }
 
 export function createEmptyAiAgentConfigDraft(
@@ -107,30 +104,7 @@ export function createEmptyAiAgentConfigDraft(
   }
 }
 
-function createEmptyPresetQuestion(): AiAgentPresetQuestion {
-  return {
-    id: `preset-question-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    category: '默认',
-    question: '',
-    instruction: '',
-  }
-}
-
-function getEmptyPresetQuestionIndexes(questions: AiAgentPresetQuestion[]): number[] {
-  return questions
-    .map((item, index) => (!item.question.trim() || !item.instruction.trim() ? index + 1 : null))
-    .filter((value): value is number => value !== null)
-}
-
-function buildPublishPresetQuestions(questions: AiAgentPresetQuestion[]) {
-  return questions.map((item) => ({
-    category: item.category?.trim() || '默认',
-    question: item.question.trim(),
-    instruction: item.instruction.trim(),
-  }))
-}
-
-function buildCreateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string) {
+function buildCreateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string, presetQuestions: CustomAgentPresetQuestion[]) {
   return {
     agent_name: draft.agentName.trim(),
     agent_prompt: draft.instruction.trim(),
@@ -148,7 +122,7 @@ function buildCreateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string) {
       ? draft.selectedUsers.map((user) => user.id)
       : [],
     community_category_id: draft.isPublishingToCommunity ? draft.communityCategoryId : undefined,
-    preset_questions: buildPublishPresetQuestions(draft.presetQuestions),
+    preset_questions: presetQuestions,
     knowledge_spaces: draft.knowledgeSpaces.map((space) => ({
       id: space.id,
       spaceName: space.name,
@@ -156,16 +130,17 @@ function buildCreateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string) {
   }
 }
 
-function buildUpdateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string) {
+function buildUpdateAgentPayload(draft: AiAgentConfigDraft, avatarUrl: string, agentPrompt: string | undefined, presetQuestions?: CustomAgentPresetQuestion[]) {
   return {
     agent_name: draft.agentName.trim(),
     description: draft.description.trim(),
     avatar_url: avatarUrl,
-    agent_prompt: draft.instruction.trim(),
+    agent_prompt: agentPrompt,
     enabled_skills: draft.selectedSkills.map((skill) => ({
       skill_name: skill.skillName,
     })),
-    preset_questions: buildPublishPresetQuestions(draft.presetQuestions),
+    // 修改接口会整体替换问题。未修改时不传，保留包括超限在内的历史问题。
+    ...(presetQuestions === undefined ? {} : { preset_questions: presetQuestions }),
     knowledge_spaces: draft.knowledgeSpaces.map((space) => ({
       id: space.id,
       spaceName: space.name,
@@ -327,7 +302,8 @@ export function AiAgentConfigPage({
   const selectedUsers = Array.isArray(draft.selectedUsers) ? draft.selectedUsers : []
   const selectedSkills = Array.isArray(draft.selectedSkills) ? draft.selectedSkills : []
   const knowledgeSpaces = Array.isArray(draft.knowledgeSpaces) ? draft.knowledgeSpaces : []
-  const presetQuestions = Array.isArray(draft.presetQuestions) ? draft.presetQuestions : []
+  const presetQuestions = draft.presetQuestions
+  const originalDraft = useRef(draft)
   const webSearchEnabled = draft.webSearchEnabled === true
 
   const updateDraft = (patch: Partial<AiAgentConfigDraft>) => {
@@ -641,7 +617,6 @@ export function AiAgentConfigPage({
     return renderSkillSheetItems(list.items, category === 'recommended')
   }
 
-  const visiblePresetQuestions = presetQuestions.filter((item) => item.question.trim())
   const canSubmitDebugPrompt = useMemo(() => {
     return Boolean(debugInput.trim()) && !debugIsResponding && !debugIsStopping
   }, [debugInput, debugIsResponding, debugIsStopping])
@@ -832,17 +807,26 @@ export function AiAgentConfigPage({
       return
     }
 
-    if (!draft.instruction.trim()) {
+    const agentPrompt = draft.instruction.trim()
+    if (!agentPrompt) {
       showPublishError('请先填写指令')
       return
     }
-
-    const emptyIndexes = getEmptyPresetQuestionIndexes(presetQuestions)
-
-    if (emptyIndexes.length > 0) {
-      showPublishError(`问题${emptyIndexes.join('、')}的名称或指令不能为空，请填写完整后再发布`)
+    const agentPromptTooLong = agentPrompt.length > MAX_AGENT_INSTRUCTION_LENGTH
+    if (agentPromptTooLong && (mode === 'create' || agentPrompt !== originalDraft.current.instruction.trim())) {
+      showPublishError(`智能体指令最多 ${MAX_AGENT_INSTRUCTION_LENGTH} 字，请缩短后再发布`)
       return
     }
+
+    const shouldPublishQuestions = mode === 'create' || !arePresetQuestionsUnchanged(originalDraft.current.presetQuestions, presetQuestions)
+    if (shouldPublishQuestions) {
+      const validationError = validatePresetQuestions(presetQuestions)
+      if (validationError) {
+        showPublishError(validationError)
+        return
+      }
+    }
+    const publishedQuestions = shouldPublishQuestions ? serializePresetQuestions(presetQuestions) : undefined
 
     if (draft.publishScope === 'specified' && selectedUsers.length === 0) {
       showPublishError('指定成员可见时，请至少选择 1 个成员')
@@ -875,9 +859,10 @@ export function AiAgentConfigPage({
       let publishedAvatarUrl = normalizedAvatarUrl
 
       if (mode === 'edit') {
+        // 超限的历史主指令未修改时不重传，避免影响其他设置保存。
         const updatedAgent = await updateCustomAgent(
           agentId!,
-          buildUpdateAgentPayload(draft, normalizedAvatarUrl),
+          buildUpdateAgentPayload(draft, normalizedAvatarUrl, agentPromptTooLong ? undefined : agentPrompt, publishedQuestions),
           controller.signal,
         )
 
@@ -887,7 +872,7 @@ export function AiAgentConfigPage({
         publishedAvatarUrl = updatedAgent?.avatar_url || publishedAvatarUrl
       } else {
         const result = await createCustomAgent(
-          buildCreateAgentPayload(draft, normalizedAvatarUrl),
+          buildCreateAgentPayload(draft, normalizedAvatarUrl, publishedQuestions ?? []),
           controller.signal,
         )
 
@@ -926,6 +911,7 @@ export function AiAgentConfigPage({
         agentName: publishedAgentName,
         description: publishedDescription,
         avatarUrl: publishedAvatarUrl,
+        presetQuestions: publishedQuestions,
       })).catch((error) => {
         console.warn('发布成功后的页面同步失败:', error)
       })
@@ -984,7 +970,7 @@ export function AiAgentConfigPage({
         description: skill.description,
       }))}
       messages={debugMessages}
-      questions={visiblePresetQuestions}
+      questions={presetQuestions}
       requestError={debugRequestError}
       agentName={draft.agentName || pageTitle}
       onSuggestionClick={(prompt) => {
@@ -1035,7 +1021,7 @@ export function AiAgentConfigPage({
           <textarea
             aria-label="指令"
             className="ai-agent-config-textarea"
-            maxLength={3000}
+            maxLength={MAX_AGENT_INSTRUCTION_LENGTH}
             placeholder="请输入智能体的角色设定、回答风格和边界要求"
             rows={8}
             value={draft.instruction}
@@ -1127,84 +1113,10 @@ export function AiAgentConfigPage({
         )}
       </section>
 
-      <section className="ai-agent-config-card">
-        <div className="ai-agent-config-section-head">
-          <div className="ai-agent-config-card-title">对话配置</div>
-          <button
-            className="ai-agent-config-link-btn"
-            type="button"
-            onClick={() => {
-              updateDraft({
-                presetQuestions: [...presetQuestions, createEmptyPresetQuestion()],
-              })
-            }}
-          >
-            添加
-          </button>
-        </div>
-
-        {presetQuestions.length === 0 ? (
-          <div className="ai-agent-config-empty">暂未配置推荐问题</div>
-        ) : (
-          <div className="ai-agent-question-list">
-            {presetQuestions.map((item, index) => (
-              <article className="ai-agent-question-card" key={item.id}>
-                <div className="ai-agent-question-card-head">
-                  <div className="ai-agent-question-card-title">问题 {index + 1}</div>
-                  <button
-                    aria-label={`删除问题${index + 1}`}
-                    className="ai-agent-config-remove-btn"
-                    type="button"
-                    onClick={() => {
-                      updateDraft({
-                        presetQuestions: presetQuestions.filter((question) => question.id !== item.id),
-                      })
-                    }}
-                  >
-                    移除
-                  </button>
-                </div>
-
-                <label className="ai-agent-config-field">
-                  <span className="ai-agent-config-field-label">名称</span>
-                  <input
-                    className="ai-agent-config-input"
-                    maxLength={20}
-                    placeholder="请输入推荐问题名称"
-                    type="text"
-                    value={item.question}
-                    onChange={(event) => {
-                      updateDraft({
-                        presetQuestions: presetQuestions.map((question) => (
-                          question.id === item.id ? { ...question, question: event.target.value } : question
-                        )),
-                      })
-                    }}
-                  />
-                </label>
-
-                <label className="ai-agent-config-field">
-                  <span className="ai-agent-config-field-label">指令</span>
-                  <textarea
-                    className="ai-agent-config-textarea is-compact"
-                    maxLength={200}
-                    placeholder="请输入点击推荐问题后发送的具体指令"
-                    rows={4}
-                    value={item.instruction}
-                    onChange={(event) => {
-                      updateDraft({
-                        presetQuestions: presetQuestions.map((question) => (
-                          question.id === item.id ? { ...question, instruction: event.target.value } : question
-                        )),
-                      })
-                    }}
-                  />
-                </label>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <AiAgentPresetQuestionEditor
+        questions={presetQuestions}
+        onChange={questions => updateDraft({ presetQuestions: questions })}
+      />
 
     </div>
   )

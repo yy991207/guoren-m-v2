@@ -1,16 +1,12 @@
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 import type { ChatMessage } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
+import type { AiAgentPresetQuestion } from '../utils/agentPresetQuestions'
 import { AiAgentAvatar } from './AiAgentAvatar'
+import { AiAgentPresetQuestionGroups } from './AiAgentPresetQuestionGroups'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiConversationThread } from './AiConversationThread'
-
-type AiAgentConversationPreviewQuestion = {
-  id: string
-  question: string
-  instruction: string
-}
 
 type AiAgentConversationPreviewSkill = {
   id: string
@@ -29,7 +25,7 @@ type AiAgentConversationPreviewProps = {
   webSearchLocked?: boolean
   configuredSkills?: AiAgentConversationPreviewSkill[]
   messages?: ChatMessage[]
-  questions: AiAgentConversationPreviewQuestion[]
+  questions: AiAgentPresetQuestion[]
   onSelectArtifact?: (artifact: SelectedArtifact) => void
   onSuggestionClick: (prompt: string) => void
   onToggleWebSearch?: () => void
@@ -70,9 +66,6 @@ export function AiAgentConversationPreview({
   const [editName, setEditName] = useState(agentName)
   const [editDescription, setEditDescription] = useState(description)
   const hasMessages = messages.length > 0
-  const visibleQuestions = useMemo(() => {
-    return questions.filter((item) => item.question.trim()).slice(0, 4)
-  }, [questions])
   const resolvedAgentName = agentName || '未命名智能体'
 
   useEffect(() => {
@@ -141,23 +134,7 @@ export function AiAgentConversationPreview({
               </div>
               {description ? <div className="ai-agent-chat-preview-desc">{description}</div> : null}
 
-              {visibleQuestions.length > 0 ? (
-                <div className="ai-agent-chat-preview-question-section">
-                  <div className="ai-agent-chat-preview-question-title">推荐问题</div>
-                  <div className="ai-agent-chat-preview-question-list">
-                    {visibleQuestions.map((item) => (
-                      <button
-                        className="ai-agent-chat-preview-question"
-                        key={item.id}
-                        type="button"
-                        onClick={() => onSuggestionClick(item.instruction || item.question)}
-                      >
-                        {item.question}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
+              <AiAgentPresetQuestionGroups questions={questions} onSelect={onSuggestionClick} />
             </div>
           </div>
         )}

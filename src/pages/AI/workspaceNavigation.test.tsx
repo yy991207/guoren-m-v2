@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import AIPage from './index'
@@ -524,12 +524,106 @@ it('智能体编辑与添加弹窗复用技能卡片，保留服务端头像、�
   expect(JSON.parse(String(publish?.[1])).enabled_skills).toEqual([{ skill_name: 'lesson' }, { skill_name: 'search' }])
 })
 
+it('旧推荐问题按分类完整展示；不改问题不重传，改了才校验并整体替换或清空', async () => {
+  const userId = 'question-categories-test'
+  localStorage.setItem('userInfo', JSON.stringify({ id: userId }))
+  const legacyQuestions = [
+    { question: '历史问题一', instruction: '指令一' },
+    { question: '历史问题二', instruction: '指令二', category: '' },
+    { question: '历史问题三', instruction: '指令三', category: '  ' },
+    { question: '历史问题四', instruction: '指令四', category: '分类1' },
+    { question: '备课问题', instruction: '备课指令', category: '备课' },
+  ]
+  const legacyPrompt = '教'.repeat(1001)
+  const agent = {
+    agent_id: 'lesson-agent', creator_user_id: userId, agent_name: '学习助手', description: '整理教案',
+    agent_category: 'partner', agent_prompt: legacyPrompt, enabled_skills: [], knowledge_spaces: [], preset_questions: legacyQuestions,
+  }
+  const session = { session_id: 'lesson', session_name: '历史任务', agent_id: agent.agent_id, messages: [] }
+  const updates: Record<string, unknown>[] = []
+  vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
+    const path = String(url)
+    if (path.endsWith('/chat/sessions/lesson')) return Response.json(session)
+    if (path.endsWith('/chat/sessions')) return Response.json({ sessions: [session] })
+    if (path.endsWith(`/custom-agents/${agent.agent_id}`)) {
+      if (options?.method === 'PUT') {
+        const body = JSON.parse(String(options.body)) as Record<string, unknown>
+        updates.push(body)
+        Object.assign(agent, body)
+      }
+      return Response.json({ data: { agent } })
+    }
+    return Response.json({ success: true, data: {} })
+  })
+  render(<MemoryRouter initialEntries={['/ai?sessionId=lesson']}><AIPage onClose={vi.fn()} /></MemoryRouter>)
+  const openDetails = async () => {
+    fireEvent.click(await screen.findByRole('button', { name: '打开自定义智能体更多操作' }))
+    fireEvent.click(screen.getByRole('button', { name: '智能体详情' }))
+    return within(await screen.findByRole('dialog', { name: '智能体详情' }))
+  }
+  const openEditor = async () => fireEvent.click(await (await openDetails()).findByRole('button', { name: '编辑' }))
+  const publish = () => fireEvent.click(screen.getByRole('button', { name: '发布' }))
+  const editor = () => within(screen.getByRole('region', { name: '对话配置' }))
+  const details = await openDetails()
+  expect(within(details.getByRole('region', { name: '分类1' })).getAllByRole('listitem')).toHaveLength(4)
+  expect(within(details.getByRole('region', { name: '备课' })).getByText('备课问题')).toBeVisible()
+  fireEvent.click(await details.findByRole('button', { name: '编辑' }))
+  const mainPrompt = () => screen.getByPlaceholderText('请输入智能体的角色设定、回答风格和边界要求')
+  expect(mainPrompt()).toHaveAttribute('maxlength', '1000')
+  expect(mainPrompt()).toHaveValue(legacyPrompt)
+  fireEvent.change(mainPrompt(), { target: { value: '规'.repeat(1001) } })
+  publish()
+  expect(screen.getAllByText(/智能体指令最多 1000 字/).length).toBeGreaterThan(0)
+  expect(updates).toHaveLength(0)
+  fireEvent.change(mainPrompt(), { target: { value: legacyPrompt } })
+  publish()
+  await waitFor(() => expect(screen.queryByRole('button', { name: '发布' })).not.toBeInTheDocument())
+  expect(updates[0]).not.toHaveProperty('agent_prompt')
+  expect(updates[0]).not.toHaveProperty('preset_questions')
+  expect(updates[0]).not.toHaveProperty('agent_category')
+
+  await openEditor()
+  const group = within(editor().getByRole('region', { name: '分类1' }))
+  expect(group.getAllByRole('article')).toHaveLength(4)
+  expect(group.getByRole('button', { name: '添加问题到 分类1' })).toBeDisabled()
+  fireEvent.change(group.getAllByRole('textbox', { name: '名称' })[0], { target: { value: '修改历史问题一' } })
+  publish()
+  expect(screen.getAllByText(/「分类1」最多 3 个问题/).length).toBeGreaterThan(0)
+  expect(updates).toHaveLength(1)
+  fireEvent.click(group.getByRole('button', { name: '删除问题4' }))
+  const validPrompt = '规'.repeat(1000)
+  fireEvent.change(mainPrompt(), { target: { value: validPrompt } })
+  publish()
+  await waitFor(() => expect(screen.queryByRole('button', { name: '发布' })).not.toBeInTheDocument())
+  expect(updates[1].agent_prompt).toBe(validPrompt)
+  expect(updates[1].preset_questions).toEqual([
+    { category: '分类1', question: '修改历史问题一', instruction: '指令一' },
+    { category: '分类1', question: '历史问题二', instruction: '指令二' },
+    { category: '分类1', question: '历史问题三', instruction: '指令三' },
+    { category: '备课', question: '备课问题', instruction: '备课指令' },
+  ])
+
+  await openEditor()
+  for (let i = 0; i < 4; i += 1) {
+    fireEvent.click(editor().getAllByRole('button', { name: '删除问题1' })[0])
+  }
+  publish()
+  await waitFor(() => expect(screen.queryByRole('button', { name: '发布' })).not.toBeInTheDocument())
+  expect(updates[2].preset_questions).toEqual([])
+})
+
 it('智能体正式对话和测试与预览都使用任务输入框，调试不向正式会话发送', async () => {
   localStorage.setItem('userInfo', JSON.stringify({ id: 'shared-composer-test' }))
   const agent = {
     agent_id: 'course-agent', creator_user_id: 'shared-composer-test', agent_name: '备课智能体', description: '整理教案',
     agent_prompt: '帮助备课', is_active: true, enable_web_search: true, enabled_skills: [], knowledge_spaces: [],
-    preset_questions: [{ question: '怎么备课？', instruction: '按课程大纲备课' }],
+    preset_questions: [
+      { question: '怎么备课？', instruction: '按课程大纲备课', category: '备课' },
+      { question: '需要预习吗？', instruction: '生成预习材料', category: '备课' },
+      { question: '怎么演示？', instruction: '生成演示脚本', category: '上课' },
+      { question: '怎样验收？', instruction: '生成验收表', category: '上课' },
+      { question: '怎样复习？', instruction: '按错题复习', category: '复习' },
+    ],
   }
   const debugPayloads: unknown[] = []
   vi.mocked(authorizedFetch).mockImplementation(async (url, options) => {
@@ -550,8 +644,9 @@ it('智能体正式对话和测试与预览都使用任务输入框，调试不�
   const liveInput = await screen.findByRole('textbox', { name: '自定义智能体输入框' })
   expect(liveInput.closest('.ai-workspace-composer')).not.toBeNull()
   expect(liveInput).toHaveAttribute('placeholder', '发消息或按住说话…')
-  fireEvent.click(screen.getByRole('button', { name: '怎么备课？' }))
+  fireEvent.click(within(screen.getByRole('region', { name: '备课' })).getByRole('button', { name: '怎么备课？' }))
   expect(liveInput).toHaveValue('按课程大纲备课')
+  expect(within(screen.getByRole('region', { name: '复习' })).getByRole('button', { name: '怎样复习？' })).toBeVisible()
   fireEvent.click(screen.getByRole('button', { name: '打开更多操作' }))
   const plus = screen.getByRole('dialog', { name: '更多操作' })
   expect(within(plus).getByRole('button', { name: '拍照' })).toBeVisible()
@@ -562,7 +657,11 @@ it('智能体正式对话和测试与预览都使用任务输入框，调试不�
   fireEvent.click(screen.getByRole('button', { name: '测试与预览' }))
   const debugInput = screen.getByRole('textbox', { name: '智能体调试输入框' })
   const debugComposer = debugInput.closest<HTMLElement>('.ai-workspace-composer')!
+  const debugPreview = within(debugInput.closest<HTMLElement>('.ai-agent-chat-preview')!)
   expect(debugInput).toHaveAttribute('placeholder', '发消息或按住说话…')
+  fireEvent.click(within(debugPreview.getByRole('region', { name: '复习' })).getByRole('button', { name: '怎样复习？' }))
+  expect(debugInput).toHaveValue('按错题复习')
+  expect(debugPayloads).toEqual([])
   fireEvent.change(debugInput, { target: { value: '调试这一轮' } })
   expect(within(debugComposer).queryByRole('button', { name: /选择模型|思考强度/ })).not.toBeInTheDocument()
   fireEvent.click(within(debugComposer).getByRole('button', { name: '发送调试消息' }))
@@ -594,6 +693,8 @@ it('从任务直接进入三个栏目再返回，保留原消息、草稿和会�
     switchTo('智能体')
     expect(screen.getByRole('heading', { name: '智能体' })).toBeVisible()
     expect(screen.getByPlaceholderText('搜索智能体')).toBeVisible()
+    expect(screen.getByRole('tab', { name: '伙伴' })).toBeVisible()
+    expect(screen.queryByRole('tab', { name: '订阅' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: '创建智能体' }).textContent).toBe('')
     expect(draft).not.toBeVisible()
     switchTo('库')

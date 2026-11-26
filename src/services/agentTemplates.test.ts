@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { authorizedFetch } from '../utils/request'
-import { fetchAgentTemplateTask } from './agentTemplates'
+import { fetchAgentTemplateDetail, fetchAgentTemplateTask } from './agentTemplates'
 
 vi.mock('../utils/request', () => ({
   authorizedFetch: vi.fn(),
@@ -9,6 +9,14 @@ vi.mock('../utils/request', () => ({
 vi.mock('./chat/api', () => ({ getChatUserId: () => 'fixture' }))
 
 beforeEach(() => vi.clearAllMocks())
+
+it('模板详情保留推荐问题的分类，不使用模板自身分类', async () => {
+  const questions = [{ question: '怎么写教案', instruction: '给出模板', category: ' 备课 ' }, { question: '如何验收', instruction: '列好清单' }]
+  vi.mocked(authorizedFetch).mockResolvedValueOnce(Response.json({ data: {
+    template: { template_id: 'lesson', template_name: '教学助手', category: '教育', preset_questions: questions },
+  } }))
+  await expect(fetchAgentTemplateDetail('lesson')).resolves.toMatchObject({ category: '教育', presetQuestions: questions })
+})
 
 it.each([
   ['running', '智能体正在生成'],

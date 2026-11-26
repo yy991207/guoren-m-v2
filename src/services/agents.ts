@@ -18,6 +18,7 @@ export interface DiscoverAgentItem {
   creatorUserId: string
   tenantId: string | null
   agentName: string
+  agentCategory: string | null
   description: string
   avatarUrl: string | null
   isActive: boolean
@@ -116,6 +117,7 @@ function normalizeVisibleAgent(item: unknown): DiscoverAgentItem | null {
     creatorUserId: typeof record.creator_user_id === 'string' ? record.creator_user_id : '',
     tenantId: typeof record.tenant_id === 'string' || typeof record.tenant_id === 'number' ? String(record.tenant_id) : null,
     agentName,
+    agentCategory: typeof record.agent_category === 'string' ? record.agent_category : null,
     description: typeof record.description === 'string' ? record.description : '',
     avatarUrl: typeof record.avatar_url === 'string' ? record.avatar_url : null,
     isActive: Boolean(record.is_active),

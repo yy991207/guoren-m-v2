@@ -33,6 +33,7 @@ export type CustomAgentKnowledgeSpace = {
 
 export type CreateCustomAgentPayload = {
   agent_name: string
+  agent_category?: string | null
   agent_prompt: string
   avatar_url: string
   description: string
@@ -48,6 +49,7 @@ export type CreateCustomAgentPayload = {
 
 export type UpdateCustomAgentPayload = {
   agent_name?: string
+  agent_category?: string | null
   description?: string
   avatar_url?: string
   agent_prompt?: string
@@ -66,6 +68,7 @@ export type CustomAgentDetail = {
   agent_id: string
   creator_user_id: string
   agent_name: string
+  agent_category?: string | null
   description: string
   avatar_url: string
   agent_prompt: string

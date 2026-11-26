@@ -15,6 +15,7 @@ export type AgentTemplateItem = {
 }
 
 export type AgentTemplatePresetQuestion = {
+  category?: string
   question: string
   instruction: string
 }
@@ -124,6 +125,7 @@ function normalizeTemplatePresetQuestions(value: unknown): AgentTemplatePresetQu
     return [{
       question,
       instruction: typeof record.instruction === 'string' ? record.instruction : '',
+      ...(typeof record.category === 'string' ? { category: record.category } : {}),
     }]
   })
 }

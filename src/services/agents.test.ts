@@ -20,8 +20,8 @@ const changed = (subscription: unknown) => Response.json({ success: true, data: 
 beforeEach(() => vi.resetAllMocks())
 
 it('按原始可见列表条数翻页，第一页没有订阅或收藏也继续', async () => {
-  const unsubscribed = visibleAgent('a', { value: false })
-  const favorite = visibleAgent('b', { value: true, is_favorite: true })
+  const unsubscribed = { ...visibleAgent('a', { value: false }), agent_category: 'partner' }
+  const favorite = { ...visibleAgent('b', { value: true, is_favorite: true }), agent_category: '' }
   const subscribed = visibleAgent('c', { value: true, is_favorite: false })
   const controller = new AbortController()
   fetch.mockResolvedValueOnce(page([unsubscribed, unsubscribed, {}], 5)).mockResolvedValueOnce(page([favorite, subscribed], 5))
@@ -32,6 +32,7 @@ it('按原始可见列表条数翻页，第一页没有订阅或收藏也继续'
     '/api/v1/custom-agents/public/list?user_id=current-user&limit=100&skip=3',
   ])
   expect(fetch).toHaveBeenNthCalledWith(2, expect.any(String), expect.objectContaining({ signal: controller.signal }))
+  expect(agents.map(agent => agent.agentCategory)).toEqual(['partner', '', null])
   const groups = groupVisibleAgents(agents, 'current-user')
   expect(groups.collaboration.map(agent => agent.agentId)).toEqual(['a', 'b', 'c'])
   expect(groups.subscribed.map(agent => agent.agentId)).toEqual(['b', 'c'])

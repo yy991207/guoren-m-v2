@@ -2104,7 +2104,6 @@
   gap: 12px;
 }
 
-.ai-agent-question-card-title,
 .ai-agent-knowledge-name {
   min-width: 0;
   overflow: hidden;
@@ -2178,10 +2177,6 @@
   transform: translateX(18px);
 }
 
-.ai-agent-question-card-head {
-  margin-bottom: 12px;
-}
-
 .ai-agent-chat-preview {
   position: relative;
   flex: 1;
@@ -2206,13 +2201,13 @@
 
 .ai-agent-chat-preview-thread {
   padding-top: 28px;
-  justify-content: center;
 }
 
 .ai-agent-chat-preview-welcome {
+  flex: none;
   width: 100%;
   max-width: 520px;
-  margin: 0 auto;
+  margin: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2277,45 +2272,6 @@
   font-size: 15px;
   line-height: 1.8;
   text-align: center;
-}
-
-.ai-agent-chat-preview-question-section {
-  width: 100%;
-  margin-top: 28px;
-}
-
-.ai-agent-chat-preview-question-title {
-  margin-bottom: 14px;
-  color: #1f2329;
-  font-size: 16px;
-  line-height: 1.4;
-  font-weight: 700;
-}
-
-.ai-agent-chat-preview-question-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.ai-agent-chat-preview-question {
-  min-height: 42px;
-  padding: 10px 16px;
-  border: 1px solid rgba(31, 35, 41, 0.08);
-  border-radius: 999px;
-  background: #fff;
-  color: #4b5563;
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 500;
-  text-align: left;
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
-}
-
-.ai-agent-chat-preview-question:active {
-  border-color: rgba(74, 124, 255, 0.3);
-  background: rgba(74, 124, 255, 0.04);
-  color: #355ecf;
 }
 
 .ai-agent-chat-preview-bottom {
@@ -2475,24 +2431,6 @@
   font-size: 16px;
   line-height: 1.4;
   font-weight: 700;
-}
-
-.ai-custom-agent-detail-sheet-question-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.ai-custom-agent-detail-sheet-question {
-  min-height: 42px;
-  padding: 10px 16px;
-  border: 1px solid #e6ebf2;
-  border-radius: 999px;
-  background: #fff;
-  color: #5a6472;
-  font-size: 14px;
-  line-height: 1.5;
-  font-weight: 500;
 }
 
 .ai-custom-agent-detail-sheet-skill-list {

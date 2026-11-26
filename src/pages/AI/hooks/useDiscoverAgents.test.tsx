@@ -17,11 +17,11 @@ const subscribed = { value: true, isFavorite: false } as const
 const favorite = { value: true, isFavorite: true } as const
 const unsubscribed = { value: false } as const
 const publicAgent: DiscoverAgentItem = {
-  agentId: 'public-id', agentName: '公开助手', creatorUserId: 'other', tenantId: null, description: '', avatarUrl: null,
+  agentId: 'public-id', agentName: '公开助手', agentCategory: 'partner', creatorUserId: 'other', tenantId: null, description: '', avatarUrl: null,
   isActive: true, publishScope: 'public', subscription: unsubscribed, createdAt: '', updatedAt: '',
 }
 const privateAgent: DiscoverAgentItem = {
-  ...publicAgent, agentId: 'private-id', agentName: '私有助手', creatorUserId: 'me', tenantId: '1002',
+  ...publicAgent, agentId: 'private-id', agentName: '私有助手', agentCategory: null, creatorUserId: 'me', tenantId: '1002',
   isActive: false, publishScope: 'private', subscription: favorite,
 }
 const stateFor = (subscription: AgentSubscription): AgentSubscriptionState => ({ agentId: publicAgent.agentId, subscription })
@@ -42,7 +42,7 @@ function Page({ onOpenAgentChat }: { onOpenAgentChat: (agent: DiscoverAgentItem)
     allAgents={agents.visibleAgents}
     discoverError={agents.discoverError} discoverLoading={agents.discoverLoading}
     discoverSections={[
-      { key: 'subscribed', title: '订阅', items: groups.subscribed },
+      { key: 'subscribed', title: '伙伴', items: groups.subscribed },
       { key: 'official', title: '官方智能体', items: groups.official },
       { key: 'enterprise', title: '企业智能体', items: groups.enterprise },
       { key: 'collaboration', title: '共创', items: groups.collaboration },
@@ -87,18 +87,18 @@ it('默认全部且不重复显示，切换分类不影响顶部收藏或搜索'
   const tabs = screen.getByRole('tablist', { name: '智能体分类' })
   expect(top.compareDocumentPosition(tabs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   expect(tabs).toHaveAttribute('data-variant', 'chips')
-  expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['全部', '订阅', '官方', '企业', '共创', '我的'])
+  expect(within(tabs).getAllByRole('tab').map(tab => tab.textContent)).toEqual(['全部', '伙伴', '官方', '企业', '共创', '我的'])
   expect(within(tabs).getByRole('tab', { name: '全部' })).toHaveAttribute('aria-selected', 'true')
   expect(categoryPanel('全部').getAllByRole('article')).toHaveLength(2)
   expect(favoritesPanel().getByRole('button', { name: chatName(privateAgent) })).toBeDisabled()
-  selectCategory('订阅')
-  const privateCard = within(categoryPanel('订阅').getByRole('article', { name: privateAgent.agentName }))
+  selectCategory('伙伴')
+  const privateCard = within(categoryPanel('伙伴').getByRole('article', { name: privateAgent.agentName }))
   expect(privateCard.getByRole('button', { name: chatName(privateAgent) })).toBeDisabled()
   fireEvent.click(more(privateCard))
   expect(privateCard.getByRole('button', { name: '取消订阅' })).toBeEnabled()
 
   selectCategory('官方')
-  expect(screen.queryByRole('tabpanel', { name: '订阅' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('tabpanel', { name: '伙伴' })).not.toBeInTheDocument()
   expect(favoritesPanel().getByRole('button', { name: chatName(privateAgent) })).toBeDisabled()
   const publicCard = within(categoryPanel('官方').getByRole('article', { name: publicAgent.agentName }))
   fireEvent.click(more(publicCard))
@@ -113,8 +113,8 @@ it('默认全部且不重复显示，切换分类不影响顶部收藏或搜索'
   expect(onOpenAgentChat).toHaveBeenCalledWith(expect.objectContaining({ subscription: unsubscribed }))
   fireEvent.change(screen.getByRole('searchbox', { name: '搜索智能体' }), { target: { value: publicAgent.agentName } })
   expect(favoritesPanel().getByText('暂无收藏的智能体')).toBeVisible()
-  selectCategory('订阅')
-  expect(categoryPanel('订阅').getByText('暂无订阅的智能体')).toBeVisible()
+  selectCategory('伙伴')
+  expect(categoryPanel('伙伴').getByText('暂无订阅的智能体')).toBeVisible()
   expect(screen.getByRole('searchbox', { name: '搜索智能体' })).toHaveValue(publicAgent.agentName)
   expect(list).toHaveBeenCalledTimes(1)
 })
@@ -130,11 +130,11 @@ it('菜单写入在分类间同步；取消收藏不退订，退订同时清除�
   const cardIn = (category: string) => within(categoryPanel(category).getByRole('article', { name: publicAgent.agentName }))
   await screen.findByRole('tabpanel', { name: '全部' })
   action(cardIn('全部'), '订阅')
-  selectCategory('订阅')
-  await categoryPanel('订阅').findByRole('article', { name: publicAgent.agentName })
-  action(cardIn('订阅'), '收藏')
+  selectCategory('伙伴')
+  await categoryPanel('伙伴').findByRole('article', { name: publicAgent.agentName })
+  action(cardIn('伙伴'), '收藏')
   expect(favoriteWrite).toHaveBeenCalledWith(publicAgent.agentId, true, expect.any(AbortSignal))
-  expect(more(cardIn('订阅'))).toBeDisabled()
+  expect(more(cardIn('伙伴'))).toBeDisabled()
   selectCategory('全部')
   expect(more(cardIn('全部'))).toBeDisabled()
   expect(cardIn('全部').getByRole('button', { name: chatName(publicAgent) })).toBeEnabled()
@@ -145,15 +145,15 @@ it('菜单写入在分类间同步；取消收藏不退订，退订同时清除�
   expect(topEntry()).toBeVisible()
   fireEvent.click(topEntry()!)
   expect(onOpenAgentChat).toHaveBeenCalledWith(expect.objectContaining({ subscription: favorite }))
-  selectCategory('订阅')
-  action(cardIn('订阅'), '取消收藏')
+  selectCategory('伙伴')
+  action(cardIn('伙伴'), '取消收藏')
   await waitFor(() => expect(topEntry()).not.toBeInTheDocument())
-  expect(more(cardIn('订阅'))).toBeEnabled()
-  action(cardIn('订阅'), '收藏')
+  expect(more(cardIn('伙伴'))).toBeEnabled()
+  action(cardIn('伙伴'), '收藏')
   await waitFor(() => expect(topEntry()).toBeVisible())
-  action(cardIn('订阅'), '取消订阅')
+  action(cardIn('伙伴'), '取消订阅')
   await waitFor(() => expect(topEntry()).not.toBeInTheDocument())
-  expect(categoryPanel('订阅').queryByRole('article', { name: publicAgent.agentName })).not.toBeInTheDocument()
+  expect(categoryPanel('伙伴').queryByRole('article', { name: publicAgent.agentName })).not.toBeInTheDocument()
   selectCategory('官方')
   expect(more(cardIn('官方'))).toBeEnabled()
   expect(favoriteWrite.mock.calls.map(([, target]) => target)).toEqual([true, false, true])
@@ -171,9 +171,9 @@ it('收藏分卡不受切换影响，当前分类一次显示全部且不重查'
   const cards = Array.from(favorites.querySelectorAll<HTMLElement>('.ai-discover-favorites-card'))
   expect(cards.map(card => within(card).getAllByRole('button').length)).toEqual([3, 3, 1])
   expect(categoryPanel('全部').getAllByRole('article')).toHaveLength(7)
-  selectCategory('订阅')
-  expect(categoryPanel('订阅').getAllByRole('article')).toHaveLength(7)
-  expect(categoryPanel('订阅').queryByRole('button', { name: /上一页|下一页/ })).not.toBeInTheDocument()
+  selectCategory('伙伴')
+  expect(categoryPanel('伙伴').getAllByRole('article')).toHaveLength(7)
+  expect(categoryPanel('伙伴').queryByRole('button', { name: /上一页|下一页/ })).not.toBeInTheDocument()
   selectCategory('官方')
   expect(categoryPanel('官方').getAllByRole('article')).toHaveLength(7)
   expect(screen.getByRole('region', { name: '收藏' })).toBe(favorites)

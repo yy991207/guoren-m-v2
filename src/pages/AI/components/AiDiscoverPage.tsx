@@ -24,7 +24,7 @@ type AiDiscoverPageProps = {
 }
 
 const CATEGORY_LABELS: Record<DiscoverCategoryKey, string> = {
-  all: '全部', subscribed: '订阅', official: '官方', enterprise: '企业', collaboration: '共创', mine: '我的',
+  all: '全部', subscribed: '伙伴', official: '官方', enterprise: '企业', collaboration: '共创', mine: '我的',
 }
 
 const DISCOVER_SECTION_EMPTY_TEXT: Record<DiscoverCategoryKey, string> = {
