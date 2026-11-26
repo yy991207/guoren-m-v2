@@ -3,7 +3,7 @@ import { Popover } from 'antd-mobile'
 import { MoreOutline } from 'antd-mobile-icons'
 import type { DiscoverAgentItem } from '../../../services/agents'
 import DisplayName from '../../../components/DisplayName'
-import { AiNameAvatar } from './AiNameAvatar'
+import { AiCatalogCard, AiCatalogTag } from './AiCatalogCard'
 import './AiDiscoverAgentCard.css'
 
 type AiDiscoverAgentCardProps = {
@@ -33,43 +33,21 @@ export function AiDiscoverAgentCard({
   }
 
   return (
-    <article
-      aria-busy={pending}
-      aria-label={agent.agentName}
-      className="ai-discover-card"
+    <AiCatalogCard
+      avatarUrl={agent.avatarUrl}
+      busy={pending}
+      description={agent.description || '暂无描述'}
+      footer={<AiCatalogTag>{formatAgentMeta(agent)}</AiCatalogTag>}
+      meta={<DisplayName className="ai-discover-card-author" userId={agent.creatorUserId} prefix="@" />}
+      open={{ label: `去对话：${agent.agentName}`, run: onOpenChat, disabled: !agent.isActive }}
+      title={agent.agentName}
       onKeyDown={event => {
         if (event.key !== 'Escape' || !menuOpen) return
         event.stopPropagation()
         onMenuOpenChange(false)
         moreRef.current?.focus()
       }}
-    >
-      <div className="ai-discover-card-head">
-        <AiNameAvatar
-          avatarUrl={agent.avatarUrl}
-          className="ai-discover-card-avatar"
-          imageClassName="ai-discover-card-avatar-image"
-          name={agent.agentName}
-          tone="white"
-        />
-        <div className="ai-discover-card-heading">
-          <div className="ai-discover-card-title" title={agent.agentName}>{agent.agentName}</div>
-          <DisplayName className="ai-discover-card-author" userId={agent.creatorUserId} prefix="@" />
-        </div>
-      </div>
-      <p className="ai-discover-card-desc">{agent.description || '暂无描述'}</p>
-      <div className="ai-discover-card-footer">
-        <span className="ai-discover-card-tag">{formatAgentMeta(agent)}</span>
-      </div>
-      {/* 对话和更多操作用独立的按钮，菜单里的点击不会触发会话。 */}
-      <button
-        aria-label={`去对话：${agent.agentName}`}
-        className="ai-discover-card-chat"
-        disabled={!agent.isActive}
-        type="button"
-        onClick={onOpenChat}
-      />
-      {subscription && (
+      sideAction={subscription && (
         <Popover
           className="ai-discover-card-menu"
           content={(
@@ -95,13 +73,13 @@ export function AiDiscoverAgentCard({
             aria-controls={menuOpen && !pending ? menuId : undefined}
             aria-expanded={menuOpen && !pending}
             aria-label={`更多操作：${agent.agentName}`}
-            className="ai-discover-card-more"
+            className="ai-catalog-card-side-action"
             disabled={pending}
             ref={moreRef}
             type="button"
           ><MoreOutline aria-hidden="true" width={18} height={18} /></button>
         </Popover>
       )}
-    </article>
+    />
   )
 }

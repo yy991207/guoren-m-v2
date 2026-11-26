@@ -1,0 +1,39 @@
+.ai-commands-page {
+  display: flex;
+  flex-direction: column;
+  block-size: var(--app-viewport-height, 100dvh);
+  min-block-size: 0;
+}
+
+/* 三个分类用相同的标题、内容及底部高度，避免有无封面改变卡片尺寸。 */
+.ai-commands-page .ai-catalog-card {
+  display: grid;
+  grid-template-rows: auto auto 36px;
+  align-content: start;
+}
+
+.ai-commands-page .ai-catalog-card-title {
+  min-block-size: 2lh;
+}
+
+.ai-commands-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-block-size: 0;
+  aspect-ratio: 1.35 / 1;
+}
+
+.ai-commands-card-body > .ai-catalog-card-description {
+  flex: none;
+}
+
+.ai-commands-cover {
+  display: block;
+  flex: 1 1 0;
+  inline-size: 100%;
+  min-block-size: 0;
+  border-radius: 9px;
+  background: #eef1f4;
+  object-fit: cover;
+}

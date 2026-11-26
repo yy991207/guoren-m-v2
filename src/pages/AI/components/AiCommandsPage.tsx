@@ -1,6 +1,10 @@
-import { AiScrollScope } from './scrollbars/AiScrollScope'
-import { AiLoading } from './AiLoading'
+import { useState } from 'react'
 import type { CommandApiItem } from '../../../services/commands'
+import { AiCatalogCard } from './AiCatalogCard'
+import { AiCatalogGrid, AiCatalogPage } from './AiCatalogPage'
+import { AiLoading } from './AiLoading'
+import { AiScrollScope } from './scrollbars/AiScrollScope'
+import './AiCommandsPage.css'
 
 export type AiCommandsPageTabKey = 'best-practice' | 'recommended-prompts' | 'my-prompts'
 
@@ -17,131 +21,63 @@ type AiCommandsPageProps = {
   onTabChange: (tab: AiCommandsPageTabKey) => void
 }
 
-const COMMAND_TABS: Array<{ key: AiCommandsPageTabKey; label: string }> = [
+const COMMAND_TABS: ReadonlyArray<{ key: AiCommandsPageTabKey; label: string }> = [
   { key: 'best-practice', label: '最佳实践' },
   { key: 'recommended-prompts', label: '推荐指令' },
   { key: 'my-prompts', label: '我的指令' },
 ]
 
-function isRemoteAsset(value: string | null | undefined): value is string {
-  return Boolean(value && /^https?:\/\//.test(value))
-}
-
-function getPromptListState(activeTab: AiCommandsPageTabKey, myCommands: CommandApiItem[], officialCommands: CommandApiItem[]) {
-  if (activeTab === 'my-prompts') {
-    return {
-      emptyText: '暂无我的指令',
-      items: myCommands,
-    }
-  }
-
-  return {
-    emptyText: '暂无推荐指令',
-    items: officialCommands,
-  }
-}
-
-function renderCommandIcon(command: CommandApiItem) {
-  if (isRemoteAsset(command.icon)) {
-    return <img alt={command.name} className="ai-commands-prompt-icon-image" src={command.icon} />
-  }
-
-  return <span>{command.icon || '📝'}</span>
-}
-
 export default function AiCommandsPage({
-  workspaceScrollbars,
-  activeTab,
-  bestPractices,
-  error,
-  loading,
-  myCommands,
-  officialCommands,
-  onApplyCommand,
-  onBack,
-  onTabChange,
+  workspaceScrollbars, activeTab, bestPractices, error, loading, myCommands, officialCommands,
+  onApplyCommand, onBack, onTabChange,
 }: AiCommandsPageProps) {
-  const { emptyText, items } = getPromptListState(activeTab, myCommands, officialCommands)
+  const [search, setSearch] = useState('')
+  const itemsByTab = { 'best-practice': bestPractices, 'recommended-prompts': officialCommands, 'my-prompts': myCommands }
+
+  const renderCommands = (tab: (typeof COMMAND_TABS)[number]) => {
+    if (loading) return <AiLoading message="内容加载中…" variant="page" />
+    if (error) return <div className="ai-data-status" role="alert">{error}</div>
+
+    const keyword = search.trim().toLowerCase()
+    const items = itemsByTab[tab.key].filter(command => [command.name, command.description].some(value => value?.toLowerCase().includes(keyword)))
+    if (!items.length) return <div className="ai-data-status">{keyword ? '未找到匹配的指令' : `暂无${tab.label}`}</div>
+
+    const practice = tab.key === 'best-practice'
+    return (
+      <AiCatalogGrid>
+        {items.map(command => {
+          const apply = () => onApplyCommand(command)
+          return (
+            <AiCatalogCard
+              body={(
+                <div className="ai-commands-card-body">
+                  {command.description && <p className="ai-catalog-card-description">{command.description}</p>}
+                  {practice && command.image && <img alt={`${command.name}封面`} className="ai-commands-cover" decoding="async" loading="lazy" src={command.image} />}
+                </div>
+              )}
+              key={command.id}
+              open={{ label: `做同款：${command.name}`, run: apply, actionText: '做同款' }}
+              showAvatar={false}
+              title={command.name}
+            />
+          )
+        })}
+      </AiCatalogGrid>
+    )
+  }
 
   return (
     <AiScrollScope enabled={workspaceScrollbars} className="ai-commands-page">
-      <div className="ai-commands-page-header">
-        <button className="ai-commands-page-back" type="button" onClick={onBack} aria-label="返回">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <div className="ai-commands-page-tabs">
-          {COMMAND_TABS.map((tab) => (
-            <button
-              className={`ai-commands-page-tab ${activeTab === tab.key ? 'is-active' : ''}`}
-              key={tab.key}
-              type="button"
-              onClick={() => onTabChange(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-        <div className="ai-commands-page-header-gap" />
-      </div>
-
-      <div className="ai-commands-page-content">
-        {loading ? <AiLoading message="内容加载中…" variant="page" /> : null}
-        {!loading && error ? <div className="ai-commands-page-status">{error}</div> : null}
-
-        {!loading && !error && activeTab === 'best-practice' ? (
-          bestPractices.length > 0 ? (
-            <div className="ai-commands-practice-grid">
-              {bestPractices.map((command) => (
-                <article className="ai-commands-practice-card" key={command.id}>
-                  <div className="ai-commands-practice-title">{command.name}</div>
-                  <div className="ai-commands-practice-cover">
-                    {command.image ? (
-                      <img
-                        alt={command.name}
-                        className="ai-commands-practice-cover-image"
-                        decoding="async"
-                        loading="lazy"
-                        src={command.image}
-                      />
-                    ) : (
-                      <div className="ai-commands-practice-cover-placeholder">
-                        <span>{command.icon || '📝'}</span>
-                      </div>
-                    )}
-                  </div>
-                  <button className="ai-commands-practice-action" type="button" onClick={() => onApplyCommand(command)}>
-                    做同款
-                  </button>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className="ai-commands-page-status">暂无最佳实践</div>
-          )
-        ) : null}
-
-        {!loading && !error && activeTab !== 'best-practice' ? (
-          items.length > 0 ? (
-            <div className="ai-commands-prompt-list">
-              {items.map((command) => (
-                <button className="ai-commands-prompt-card" key={command.id} type="button" onClick={() => onApplyCommand(command)}>
-                  <div className="ai-commands-prompt-card-head">
-                    <div className="ai-commands-prompt-icon">
-                      {renderCommandIcon(command)}
-                    </div>
-                    <div className="ai-commands-prompt-title">{command.name}</div>
-                  </div>
-                  <div className="ai-commands-prompt-summary">{command.description}</div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="ai-commands-page-status">{emptyText}</div>
-          )
-        ) : null}
-      </div>
+      <AiCatalogPage
+        backLabel="返回"
+        categories={COMMAND_TABS.map(tab => ({ ...tab, content: tab.key === activeTab ? renderCommands(tab) : null }))}
+        category={activeTab}
+        categoryLabel="指令分类"
+        search={{ value: search, placeholder: '搜索指令', onChange: setSearch }}
+        title="指令"
+        onBack={onBack}
+        onCategoryChange={onTabChange}
+      />
     </AiScrollScope>
   )
 }

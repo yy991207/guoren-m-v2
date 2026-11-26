@@ -1,0 +1,155 @@
+.ai-catalog-page {
+  --ai-catalog-top-inset: calc(12px + env(safe-area-inset-top));
+  --ai-catalog-title-height: 44px;
+  --ai-catalog-tabs-height: 44px;
+  --ai-catalog-background: var(--ai-workspace-background, #f5f6f8);
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-block-size: 0;
+  min-inline-size: 0;
+  padding-block-start: var(--ai-catalog-top-inset);
+  overflow: hidden;
+  background: var(--ai-catalog-background);
+}
+
+.ai-catalog-header {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  flex: none;
+  block-size: var(--ai-catalog-title-height);
+  padding-inline: 16px;
+  position: relative;
+  z-index: 11;
+}
+
+/* 吸顶时从标题到分类使用同一块背景，不在滚动边界各画一块。 */
+.ai-catalog-header::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ai-catalog-background);
+  content: '';
+  pointer-events: none;
+}
+
+.ai-catalog-page[data-tabs-docked] .ai-catalog-header::before {
+  inset-block-end: calc(-1 * var(--ai-catalog-tabs-height));
+}
+
+.ai-catalog-header h1 {
+  margin: 0;
+  color: #222;
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ai-catalog-back {
+  display: flex;
+  align-items: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #333;
+  cursor: pointer;
+}
+
+.ai-catalog-content {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-block-size: 0;
+  padding-block-end: calc(16px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-width: none;
+}
+
+.ai-catalog-content::-webkit-scrollbar { display: none; }
+
+.ai-catalog-intro {
+  flex: none;
+  min-inline-size: 0;
+  padding-block-end: 8px;
+  padding-inline: 16px;
+}
+
+.ai-catalog-tools {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+}
+
+.ai-catalog-search { flex: 1; }
+
+.ai-catalog-create {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 40px;
+  block-size: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: #1f2329;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 同一组标签在吸顶前后不卸载，保留焦点和横向滚动位置。 */
+.ai-catalog-content > .ai-section-tabs[data-variant='chips'] {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 10;
+  box-sizing: border-box;
+  flex: none;
+  block-size: var(--ai-catalog-tabs-height);
+  padding: 4px 16px;
+  background: var(--ai-catalog-background);
+}
+
+.ai-catalog-dock-spacer {
+  display: none;
+  flex: none;
+  block-size: var(--ai-catalog-tabs-height);
+}
+
+.ai-catalog-page[data-tabs-docked] .ai-catalog-dock-spacer {
+  display: block;
+}
+
+.ai-catalog-page[data-tabs-docked] .ai-catalog-content > .ai-section-tabs[data-variant='chips'] {
+  position: absolute;
+  inset-block-start: calc(var(--ai-catalog-top-inset) + var(--ai-catalog-title-height));
+  inset-inline: 0;
+  z-index: 12;
+  background: transparent;
+}
+
+.ai-catalog-content > [role='tabpanel']:not([hidden]) {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  min-inline-size: 0;
+  padding-block-start: 4px;
+  padding-inline: 16px;
+}
+
+.ai-catalog-content > [role='tabpanel'] > .ai-loading {
+  flex: 1;
+  justify-content: center;
+}
+
+.ai-catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}

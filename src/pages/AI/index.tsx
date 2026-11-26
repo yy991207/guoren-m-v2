@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useSta
 import { flushSync } from 'react-dom'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Dialog, Switch, Toast } from 'antd-mobile'
-import { GlobalOutline, LeftOutline, SetOutline } from 'antd-mobile-icons'
+import { GlobalOutline, LeftOutline } from 'antd-mobile-icons'
 import { fetchCommands, mapCommandsToPromptItems, type CommandApiItem, type CommandPromptItem, type CommandsData } from '../../services/commands'
 import {
   ensureAgentUsageLog,
@@ -43,6 +43,7 @@ import {
   fetchUserSkills,
   installClawhubSkill,
   removeAddedSkill,
+  type SkillSource,
   type SkillSummaryItem,
 } from '../../services/skills'
 import { viewCustomAgent, type CustomAgentDetail } from '../../services/customAgents'
@@ -64,7 +65,7 @@ import { AiLoading } from './components/AiLoading'
 import { AiDrawerSessionGroup } from './components/AiDrawerSessionGroup'
 import { AiSaveCommandModal } from './components/AiSaveCommandModal'
 import AiLibraryFilePreview from './components/AiLibraryFilePreview'
-import { AiManageSkillCard } from './components/AiManageSkillCard'
+import { AiSkillsPage } from './components/AiSkillsPage'
 import { AiDrawerMenuNewIcon } from './components/AiDrawerMenuIcons'
 import { AiWorkspaceComposer } from './components/AiWorkspaceComposer'
 import { AiDraftAttachments } from './components/AiDraftAttachments'
@@ -111,7 +112,6 @@ export function resolveDrawerNewChatPath(pathname: string): string | null {
   return pathname === APP_ROUTE_PATHS.partner ? APP_ROUTE_PATHS.ai : null
 }
 
-const SKILL_COMMUNITY_PAGE_SIZE = 10
 const SKILL_CREATOR_TOOL_TYPE = 'skill-creator'
 const SKILL_CREATOR_INITIAL_PROMPT = '/skill-creator 帮我创建一个技能：/技能描述'
 
@@ -385,8 +385,8 @@ export default function AIPage({
   const [showCommandsPage, setShowCommandsPage] = useState(false)
   const [showSaveCommandModal, setShowSaveCommandModal] = useState(false)
   const [commandsPageTab, setCommandsPageTab] = useState<AiCommandsPageTabKey>('best-practice')
-  const [showMySkillsPage, setShowMySkillsPage] = useState(false)
-  const [mySkillsTab, setMySkillsTab] = useState<'added' | 'created'>('added')
+  const [skillCategory, setSkillCategory] = useState<SkillSource>('official')
+  const viewingManagedSkills = skillCategory === 'added' || skillCategory === 'created'
   const [showCreateSkillSheet, setShowCreateSkillSheet] = useState(false)
   const [libraryTab, setLibraryTab] = useState<LibraryScopeTabKey>('personal')
   const [selectedLibraryIds, setSelectedLibraryIds] = useState<string[]>([])
@@ -396,15 +396,12 @@ export default function AIPage({
   const [commandsLoading, setCommandsLoading] = useState(false)
   const [commandsError, setCommandsError] = useState('')
   const [skillSearchValue, setSkillSearchValue] = useState('')
-  const [featuredGroupIndex, setFeaturedGroupIndex] = useState(0)
-  const [clawhubGroupIndex, setClawhubGroupIndex] = useState(0)
   const [skillSelectorSearchValue, setSkillSelectorSearchValue] = useState('')
   const [mySkillSearchValue, setMySkillSearchValue] = useState('')
   const { official, clawhub, setSkillSelected } = useSkillCommunity(showSkillsPage, skillSearchValue)
   const { items: officialSkills } = official
   const { items: communitySkills } = clawhub
   const [selectedSkillDetail, setSelectedSkillDetail] = useState<SkillSummaryItem | null>(null)
-  const [skillDetailReturnTarget, setSkillDetailReturnTarget] = useState<'community' | 'my-skills'>('community')
   const [skillActionLoadingId, setSkillActionLoadingId] = useState<string | null>(null)
   const [removeSkillLoadingId, setRemoveSkillLoadingId] = useState<string | null>(null)
   const [deleteTargetManageSkill, setDeleteTargetManageSkill] = useState<SkillSummaryItem | null>(null)
@@ -601,7 +598,6 @@ export default function AIPage({
     setShowPlusSheet(false)
     setShowFileMenu(false)
     setWorkspaceTab('task')
-    setShowMySkillsPage(false)
     setShowSkillSelectorPage(false)
     setShowAgentConfigPage(false)
     setShowCreateAgentModal(false)
@@ -656,7 +652,6 @@ export default function AIPage({
     setShowFileMenu(false)
     setShowCreateSkillSheet(false)
     setSelectedSkillDetail(null)
-    setShowMySkillsPage(false)
     setShowCustomAgentConversationPage(false)
     setShowSkillSelectorPage(false)
     setShowLibraryPage(false)
@@ -1014,23 +1009,13 @@ export default function AIPage({
   const filteredOfficialSkills = useMemo(() => {
     return filterSkillItems(officialSkills, skillSearchValue)
   }, [officialSkills, skillSearchValue])
-  const featuredSkills = useMemo(() => {
-    const startIndex = featuredGroupIndex * SKILL_COMMUNITY_PAGE_SIZE
-
-    return filteredOfficialSkills.slice(startIndex, startIndex + SKILL_COMMUNITY_PAGE_SIZE)
-  }, [featuredGroupIndex, filteredOfficialSkills])
   const filteredClawhubSkills = useMemo(() => {
     return filterSkillItems(communitySkills, skillSearchValue)
   }, [communitySkills, skillSearchValue])
-  const visibleClawhubSkills = useMemo(() => {
-    const startIndex = clawhubGroupIndex * SKILL_COMMUNITY_PAGE_SIZE
-
-    return filteredClawhubSkills.slice(startIndex, startIndex + SKILL_COMMUNITY_PAGE_SIZE)
-  }, [clawhubGroupIndex, filteredClawhubSkills])
-  const visibleManageSkills = useMemo(() => {
-    const sourceList = mySkillsTab === 'added' ? addedSkills : createdSkills
-    return filterSkillItems(sourceList, mySkillSearchValue)
-  }, [addedSkills, createdSkills, mySkillSearchValue, mySkillsTab])
+  const visibleManageSkills = useMemo(() => ({
+    added: filterSkillItems(addedSkills, mySkillSearchValue),
+    created: filterSkillItems(createdSkills, mySkillSearchValue),
+  }), [addedSkills, createdSkills, mySkillSearchValue])
   const visibleSelectableSkills = useMemo(() => {
     return filterSkillItems(userSkills, skillSelectorSearchValue)
   }, [skillSelectorSearchValue, userSkills])
@@ -1052,41 +1037,6 @@ export default function AIPage({
   const fileInputAccept = filePickerMode === 'all'
     ? ALLOWED_CHAT_UPLOAD_EXTENSIONS.map((extension) => `.${extension}`).join(',')
     : 'image/*'
-
-  useEffect(() => {
-    const totalGroups = Math.ceil(filteredOfficialSkills.length / SKILL_COMMUNITY_PAGE_SIZE)
-
-    if (totalGroups === 0) {
-      if (featuredGroupIndex !== 0) {
-        setFeaturedGroupIndex(0)
-      }
-      return
-    }
-
-    if (featuredGroupIndex >= totalGroups) {
-      setFeaturedGroupIndex(0)
-    }
-  }, [featuredGroupIndex, filteredOfficialSkills.length])
-
-  useEffect(() => {
-    const totalGroups = Math.ceil(filteredClawhubSkills.length / SKILL_COMMUNITY_PAGE_SIZE)
-
-    if (totalGroups === 0) {
-      if (clawhubGroupIndex !== 0) {
-        setClawhubGroupIndex(0)
-      }
-      return
-    }
-
-    if (clawhubGroupIndex >= totalGroups) {
-      setClawhubGroupIndex(0)
-    }
-  }, [clawhubGroupIndex, filteredClawhubSkills.length])
-
-  useEffect(() => {
-    setFeaturedGroupIndex(0)
-    setClawhubGroupIndex(0)
-  }, [skillSearchValue])
 
   useEffect(() => {
     if (!isPartnerRoute || !activeAgent) {
@@ -1260,24 +1210,8 @@ export default function AIPage({
     }
   }, [messages.length])
 
-  const handleRefreshFeatured = useCallback(() => {
-    const totalGroups = Math.ceil(filteredOfficialSkills.length / SKILL_COMMUNITY_PAGE_SIZE)
-
-    if (totalGroups > 1) {
-      setFeaturedGroupIndex((current) => (current + 1) % totalGroups)
-    }
-  }, [filteredOfficialSkills.length])
-
-  const handleRefreshClawhub = useCallback(() => {
-    const totalGroups = Math.ceil(filteredClawhubSkills.length / SKILL_COMMUNITY_PAGE_SIZE)
-
-    if (totalGroups > 1) {
-      setClawhubGroupIndex((current) => (current + 1) % totalGroups)
-    }
-  }, [filteredClawhubSkills.length])
-
   useEffect(() => {
-    if (!showMySkillsPage) {
+    if (!showSkillsPage || !viewingManagedSkills) {
       return
     }
 
@@ -1293,8 +1227,10 @@ export default function AIPage({
           fetchCreatedSkills(controller.signal),
         ])
 
-        setAddedSkills(nextAddedSkills)
-        setCreatedSkills(nextCreatedSkills)
+        if (!controller.signal.aborted) {
+          setAddedSkills(nextAddedSkills)
+          setCreatedSkills(nextCreatedSkills)
+        }
       } catch (error) {
         if (!controller.signal.aborted) {
           setMySkillsError(error instanceof Error ? error.message : '我的技能加载失败')
@@ -1309,7 +1245,7 @@ export default function AIPage({
     return () => {
       controller.abort()
     }
-  }, [showMySkillsPage])
+  }, [showSkillsPage, viewingManagedSkills])
 
   useEffect(() => {
     if (!showSkillSelectorPage) {
@@ -1458,44 +1394,15 @@ export default function AIPage({
     setSelectedSkillName(resolvedSkillName || null)
     setShowPlusSheet(false)
     setWorkspaceTab('task')
-    setShowMySkillsPage(false)
     setShowSkillSelectorPage(false)
     setSelectedSkillDetail(null)
   }
 
-  const openOfficialSkillDetail = (skill: SkillSummaryItem) => {
-    setSkillDetailReturnTarget('community')
-    setSelectedSkillDetail({
-      ...skill,
-      source: 'official',
-    })
-  }
-
-  const openClawhubSkillDetail = (skill: SkillSummaryItem) => {
-    setSkillDetailReturnTarget('community')
-    setSelectedSkillDetail({
-      ...skill,
-      source: 'clawhub',
-    })
-  }
-
-  const openManageSkillDetail = (skill: SkillSummaryItem) => {
-    setShowMySkillsPage(false)
-    setSkillDetailReturnTarget('my-skills')
-    setSelectedSkillDetail({
-      ...skill,
-      isSelected: true,
-    })
-  }
-
-  const closeSkillDetailPage = () => {
-    setSelectedSkillDetail(null)
-
-    if (skillDetailReturnTarget === 'my-skills') {
-      setShowMySkillsPage(true)
-    }
-
-    setSkillDetailReturnTarget('community')
+  const openSkillDetail = (skill: SkillSummaryItem, category: SkillSource) => {
+    // 详情返回时保留当前分类；已添加或创建的技能仍可以直接使用。
+    setSelectedSkillDetail(category === 'added' || category === 'created'
+      ? { ...skill, isSelected: true }
+      : { ...skill, source: category })
   }
 
   const markSkillSelected = (skill: SkillSummaryItem) => {
@@ -1976,179 +1883,33 @@ export default function AIPage({
             />
           )}
 
-          {showSkillsPage && !showMySkillsPage && (selectedSkillDetail ? (
-                <AiSkillDetailPage
-                  actionLoading={skillActionLoadingId === selectedSkillDetail.id}
-                  onAction={handleSkillDetailAction}
-                  onBack={closeSkillDetailPage}
-                  skill={selectedSkillDetail}
-                />
-              ) : (
-                <div className="ai-skill-community-page">
-                  {/* Header */}
-                  <div className="ai-skill-community-header">
-                    <button aria-label="返回任务" className="ai-skill-community-menu" type="button" onClick={closeNavigationOverlays}>
-                      <LeftOutline aria-hidden="true" width={20} height={20} />
-                    </button>
-                    <div className="ai-skill-community-title">技能社区</div>
-                    <div className="ai-skill-community-actions">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" onClick={() => setShowCreateSkillSheet(true)} style={{ cursor: 'pointer' }}>
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      <button className="ai-skill-community-settings" type="button" onClick={() => setShowMySkillsPage(true)}>
-                        <SetOutline aria-hidden="true" style={{ fontSize: 20 }} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="ai-skill-community-content">
-                    <AiSearchField
-                      className="ai-skill-community-search"
-                      placeholder="搜索技能名称、描述或标签"
-                      value={skillSearchValue}
-                      onChange={setSkillSearchValue}
-                    />
-
-                    <div className="ai-skill-community-section-header">
-                      <div className="ai-skill-community-section-title">官方精选</div>
-                      <button className="ai-skill-community-refresh" type="button" onClick={handleRefreshFeatured}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M21.5 2v6h-6" />
-                          <path d="M2.5 12a9.5 9.5 0 0 1 16.5-6.5L21.5 8" />
-                          <path d="M2.5 22v-6h6" />
-                          <path d="M21.5 12a9.5 9.5 0 0 1-16.5 6.5L2.5 16" />
-                        </svg>
-                        换一换
-                      </button>
-                    </div>
-
-                    <div className="ai-skill-community-featured-list">
-                      {official.loading ? <AiLoading message="技能加载中…" /> : null}
-                      {official.error ? <div className="ai-data-status">{official.error}</div> : null}
-                      {!official.loading && !official.error && featuredSkills.length === 0 ? <div className="ai-data-status">暂无精选技能</div> : null}
-                      {featuredSkills.map((skill) => (
-                        <button className="ai-skill-community-featured-item" key={skill.id} type="button" onClick={() => openOfficialSkillDetail(skill)}>
-                          <AiNameAvatar
-                            ariaLabel={`${skill.title}头像`}
-                            className="ai-skill-community-all-icon"
-                            imageClassName="ai-skill-community-all-icon-image"
-                            name={skill.title}
-                            tone="blue"
-                          />
-                          <div className="ai-skill-community-all-body">
-                            <div className="ai-skill-community-all-title-row">
-                              <span className="ai-skill-community-all-title">{skill.title}</span>
-                              <div className="ai-skill-community-all-tags">
-                                {getSkillCardTags(skill).map((tag) => (
-                                  <span className="ai-skill-community-all-tag" key={tag}>{tag}</span>
-                                ))}
-                              </div>
-                            </div>
-                            <div className="ai-skill-community-all-desc">{skill.description || '暂无描述'}</div>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="ai-skill-community-all-skills">
-                      <div className="ai-skill-community-all-skills-header">
-                        <div className="ai-skill-community-all-skills-title">ClawHub</div>
-                        <button className="ai-skill-community-refresh" type="button" onClick={handleRefreshClawhub}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M21.5 2v6h-6" />
-                            <path d="M2.5 12a9.5 9.5 0 0 1 16.5-6.5L21.5 8" />
-                            <path d="M2.5 22v-6h6" />
-                            <path d="M21.5 12a9.5 9.5 0 0 1-16.5 6.5L2.5 16" />
-                          </svg>
-                          换一换
-                        </button>
-                      </div>
-                      <div className="ai-skill-community-all-list">
-                        {clawhub.loading ? <AiLoading message="ClawHub 技能加载中…" /> : null}
-                        {clawhub.error ? <div className="ai-data-status">{clawhub.error}</div> : null}
-                        {!clawhub.loading && !clawhub.error && filteredClawhubSkills.length === 0 ? <div className="ai-data-status">暂无 ClawHub 技能</div> : null}
-                        {visibleClawhubSkills.map((skill) => (
-                          <button className="ai-skill-community-all-item" key={skill.id} type="button" onClick={() => openClawhubSkillDetail(skill)}>
-                            <AiNameAvatar
-                              ariaLabel={`${skill.title}头像`}
-                              className="ai-skill-community-all-icon"
-                              imageClassName="ai-skill-community-all-icon-image"
-                              name={skill.title}
-                              tone="blue"
-                            />
-                            <div className="ai-skill-community-all-body">
-                              <div className="ai-skill-community-all-title-row">
-                                <span className="ai-skill-community-all-title">{skill.title}</span>
-                                <div className="ai-skill-community-all-tags">
-                                  {getSkillCardTags(skill).map((tag) => (
-                                    <span className="ai-skill-community-all-tag" key={tag}>{tag}</span>
-                                  ))}
-                                </div>
-                              </div>
-                              <div className="ai-skill-community-all-desc">{skill.description || '暂无描述'}</div>
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {showSkillsPage && (selectedSkillDetail ? (
+            <AiSkillDetailPage
+              actionLoading={skillActionLoadingId === selectedSkillDetail.id}
+              onAction={handleSkillDetailAction}
+              onBack={() => setSelectedSkillDetail(null)}
+              skill={selectedSkillDetail}
+            />
+          ) : (
+            <AiSkillsPage
+              category={skillCategory}
+              lists={{
+                official: { ...official, items: filteredOfficialSkills },
+                clawhub: { ...clawhub, items: filteredClawhubSkills },
+                added: { items: visibleManageSkills.added, loading: mySkillsLoading, error: mySkillsError },
+                created: { items: visibleManageSkills.created, loading: mySkillsLoading, error: mySkillsError },
+              }}
+              removingId={removeSkillLoadingId}
+              searchValue={viewingManagedSkills ? mySkillSearchValue : skillSearchValue}
+              onBack={closeNavigationOverlays}
+              onCategoryChange={setSkillCategory}
+              onCreate={() => setShowCreateSkillSheet(true)}
+              onDelete={openDeleteManageSkillDialog}
+              onOpenDetail={openSkillDetail}
+              onSearchChange={viewingManagedSkills ? setMySkillSearchValue : setSkillSearchValue}
+              onUse={applySkillItem}
+            />
           ))}
-
-          {/* 我的技能页 */}
-          {showMySkillsPage && (
-            <div className="ai-my-skills-page">
-              <div className="ai-my-skills-header">
-                <div className="ai-my-skills-back" onClick={() => setShowMySkillsPage(false)}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="15 18 9 12 15 6" />
-                  </svg>
-                </div>
-                <div className="ai-my-skills-tabs">
-                  <button
-                    className={`ai-my-skills-tab ${mySkillsTab === 'added' ? 'is-active' : ''}`}
-                    type="button"
-                    onClick={() => setMySkillsTab('added')}
-                  >
-                    我添加的
-                  </button>
-                  <button
-                    className={`ai-my-skills-tab ${mySkillsTab === 'created' ? 'is-active' : ''}`}
-                    type="button"
-                    onClick={() => setMySkillsTab('created')}
-                  >
-                    我创建的
-                  </button>
-                </div>
-                <div className="ai-my-skills-actions" />
-              </div>
-
-              <AiSearchField
-                className="ai-my-skills-search"
-                label="搜索我的技能"
-                placeholder="搜索"
-                value={mySkillSearchValue}
-                onChange={setMySkillSearchValue}
-              />
-
-              <div className={`ai-my-skills-list ${!mySkillsLoading && !mySkillsError && visibleManageSkills.length === 0 ? 'is-empty' : ''}`}>
-                {mySkillsLoading ? <AiLoading message="我的技能加载中…" variant="page" /> : null}
-                {!mySkillsLoading && mySkillsError ? <div className="ai-data-status">{mySkillsError}</div> : null}
-                {!mySkillsLoading && !mySkillsError && visibleManageSkills.length === 0 ? <div className="ai-data-status">暂无技能数据</div> : null}
-                {!mySkillsLoading && !mySkillsError && visibleManageSkills.map((skill) => (
-                  <AiManageSkillCard
-                    key={skill.id}
-                    loading={removeSkillLoadingId === skill.id}
-                    skill={skill}
-                    onDelete={openDeleteManageSkillDialog}
-                    onOpenDetail={openManageSkillDetail}
-                    onUse={applySkillItem}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
 

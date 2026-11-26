@@ -1,0 +1,161 @@
+.ai-catalog-card {
+  --ai-catalog-card-padding-inline: 11px;
+  --ai-catalog-card-padding-end: 8px;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-inline-size: 0;
+  padding: 11px var(--ai-catalog-card-padding-inline) var(--ai-catalog-card-padding-end);
+  border: 1px solid #e9ebee;
+  border-radius: 16px;
+  background: #fff;
+  text-align: start;
+}
+
+.ai-catalog-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ai-catalog-card-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  inline-size: 32px;
+  block-size: 32px;
+  border-radius: 50%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-catalog-card-avatar-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.ai-catalog-card-heading { min-inline-size: 0; }
+
+.ai-catalog-card-title,
+.ai-catalog-card-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.ai-catalog-card-title {
+  color: #26292e;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.ai-catalog-card-description {
+  margin: 0;
+  color: #69717d;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.ai-catalog-card-footer {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-block-size: 34px;
+  margin-block-start: auto;
+}
+
+.ai-catalog-card-footer[data-side-action] { padding-inline-end: 36px; }
+
+.ai-catalog-card-tag {
+  min-inline-size: 0;
+  padding: 2px 6px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: #f1f3f5;
+  color: #515963;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-catalog-card-open,
+.ai-catalog-card-side-action,
+.ai-catalog-card-action {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ai-catalog-card-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border-radius: inherit;
+}
+
+.ai-catalog-card-action,
+.ai-catalog-card-open-label {
+  box-sizing: border-box;
+  min-block-size: 36px;
+  padding: 4px 6px;
+  border: 1px solid #e6e8ec;
+  border-radius: 8px;
+  color: #343a42;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ai-catalog-card-action {
+  position: relative;
+  inline-size: 100%;
+}
+
+/* 提示和整卡共用同一个按钮，避免一次操作出现两个键盘焦点。 */
+.ai-catalog-card-open-label {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  inset-inline: var(--ai-catalog-card-padding-inline);
+  inset-block-end: var(--ai-catalog-card-padding-end);
+  pointer-events: none;
+}
+
+.ai-catalog-card-side-action {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  inset-inline-end: 7px;
+  inset-block-end: 5px;
+  inline-size: 36px;
+  block-size: 40px;
+  padding: 0;
+  border-radius: 8px;
+  color: #545d68;
+}
+
+.ai-catalog-card-open:not(:disabled):active { background: rgb(25 28 34 / 4%); }
+.ai-catalog-card-side-action[aria-expanded='true'],
+.ai-catalog-card-side-action:not(:disabled):active,
+.ai-catalog-card-action:not(:disabled):active {
+  background: #edf0f3;
+  color: #23272e;
+}
+
+.ai-catalog-card-open:disabled,
+.ai-catalog-card-side-action:disabled { cursor: default; }
+.ai-catalog-card-side-action:disabled { opacity: 0.45; }
+
+.ai-catalog-card-open:focus-visible,
+.ai-catalog-card-side-action:focus-visible,
+.ai-catalog-card-action:focus-visible {
+  outline: 2px solid #626e7d;
+  outline-offset: -2px;
+}

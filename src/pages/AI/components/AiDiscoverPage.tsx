@@ -3,10 +3,8 @@ import type { AgentCategoryKey, DiscoverAgentItem } from '../../../services/agen
 import { useDisplayNamePrefetch } from '../../IM/utils/displayNameHooks'
 import { AiDiscoverAgentCard } from './AiDiscoverAgentCard'
 import { AiDiscoverFavorites } from './AiDiscoverFavorites'
-import { AiDiscoverHeader } from './AiDiscoverHeader'
+import { AiCatalogCreateButton, AiCatalogGrid, AiCatalogPage } from './AiCatalogPage'
 import { AiLoading } from './AiLoading'
-import { AiSearchField } from './AiSearchField'
-import { AiSectionTabs } from './AiSectionTabs'
 
 type DiscoverCategoryKey = 'all' | AgentCategoryKey
 type DiscoverSection<Key extends DiscoverCategoryKey = DiscoverCategoryKey> = { key: Key; title: string; items: DiscoverAgentItem[] }
@@ -83,69 +81,51 @@ export function AiDiscoverPage({
   }, [sectionLengthSignature])
 
   const renderSection = (section: DiscoverSection) => {
+    if (discoverLoading) return <AiLoading message="智能体列表加载中…" variant="page" />
+    if (discoverError) return <div className="ai-data-status" role="alert">{discoverError}</div>
+    if (!section.items.length) return <div className="ai-discover-empty-state">{DISCOVER_SECTION_EMPTY_TEXT[section.key]}</div>
     return (
-      <div className="ai-discover-panel">
-        <div className="ai-discover-list">
-          {section.items.length ? section.items.map(agent => {
-            const menuKey = `${section.key}:${agent.agentId}`
-            return (
-              <AiDiscoverAgentCard
-                key={agent.agentId}
-                agent={agent}
-                pending={pendingAgentIds.has(agent.agentId)}
-                menuOpen={openMenuKey === menuKey}
-                onMenuOpenChange={open => {
-                  // 同一智能体可能在多个分类里，只展开点击的实例。
-                  setOpenMenuKey(current => open ? menuKey : current === menuKey ? null : current)
-                }}
-                onChangeSubscription={value => onChangeSubscription(agent.agentId, value)}
-                onChangeFavorite={value => onChangeFavorite(agent.agentId, value)}
-                onOpenChat={() => onOpenAgentChat(agent)}
-              />
-            )
-          }) : <div className="ai-discover-empty-state">{DISCOVER_SECTION_EMPTY_TEXT[section.key]}</div>}
-        </div>
-      </div>
+      <AiCatalogGrid>
+        {section.items.map(agent => {
+          const menuKey = `${section.key}:${agent.agentId}`
+          return (
+            <AiDiscoverAgentCard
+              key={agent.agentId}
+              agent={agent}
+              pending={pendingAgentIds.has(agent.agentId)}
+              menuOpen={openMenuKey === menuKey}
+              onMenuOpenChange={open => {
+                // 同一智能体可能在多个分类里，只展开点击的实例。
+                setOpenMenuKey(current => open ? menuKey : current === menuKey ? null : current)
+              }}
+              onChangeSubscription={value => onChangeSubscription(agent.agentId, value)}
+              onChangeFavorite={value => onChangeFavorite(agent.agentId, value)}
+              onOpenChat={() => onOpenAgentChat(agent)}
+            />
+          )
+        })}
+      </AiCatalogGrid>
     )
   }
 
   return (
-    <div className="ai-discover-page">
-      <AiDiscoverHeader onBack={onBack} />
-      <div className="ai-discover-content">
-        <div className="ai-discover-actions">
-          <AiSearchField className="ai-discover-search" placeholder="搜索智能体" value={searchValue} onChange={setSearchValue} />
-          <button className="ai-discover-create-btn" type="button" onClick={onOpenCreateAgent}>
-            <svg aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <path d="M12 5v14" />
-              <path d="M5 12h14" />
-            </svg>
-            创建智能体
-          </button>
-        </div>
-        {discoverLoading ? <AiLoading message="智能体列表加载中…" variant="page" /> :
-          discoverError ? <div className="ai-data-status" role="alert">{discoverError}</div> : (
-            <>
-              <AiDiscoverFavorites agents={filteredFavorites} onOpenAgentChat={onOpenAgentChat} />
-              <div className="ai-discover-categories">
-                <AiSectionTabs
-                  label="智能体分类"
-                  tabs={filteredSections.map(section => ({
-                    key: section.key,
-                    label: CATEGORY_LABELS[section.key],
-                    content: section.key === category ? renderSection(section) : null,
-                  }))}
-                  value={category}
-                  variant="chips"
-                  onChange={next => {
-                    setOpenMenuKey(null)
-                    setCategory(next)
-                  }}
-                />
-              </div>
-            </>
-          )}
-      </div>
-    </div>
+    <AiCatalogPage
+      action={<AiCatalogCreateButton label="创建智能体" onClick={onOpenCreateAgent} />}
+      beforeCategories={!discoverLoading && !discoverError && <AiDiscoverFavorites agents={filteredFavorites} onOpenAgentChat={onOpenAgentChat} />}
+      categories={filteredSections.map(section => ({
+        key: section.key,
+        label: CATEGORY_LABELS[section.key],
+        content: section.key === category ? renderSection(section) : null,
+      }))}
+      category={category}
+      categoryLabel="智能体分类"
+      search={{ placeholder: '搜索智能体', value: searchValue, onChange: setSearchValue }}
+      title="智能体"
+      onBack={onBack}
+      onCategoryChange={next => {
+        setOpenMenuKey(null)
+        setCategory(next)
+      }}
+    />
   )
 }
