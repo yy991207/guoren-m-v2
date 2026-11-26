@@ -1,24 +1,29 @@
-import { authorizedFetch, buildAiApiUrl } from '../utils/request'
+import { authorizedFetch, buildAiApiUrl, handleUnauthorizedResponse } from '../utils/request'
 import { getChatUserId } from './chat/api'
 
 const VISIBLE_AGENTS_PATH = '/api/v1/custom-agents/public/list'
+const AGENT_PREFERENCE_PATH = '/api/v1/custom-agents/{agent_id}'
+const VISIBLE_AGENTS_PAGE_SIZE = 100
 const AGENT_USAGE_LOGS_PATH = '/api/v1/custom-agents/usage-logs'
 const AGENT_USAGE_LOG_DETAIL_PATH = '/api/v1/custom-agents/usage-logs/{agent_id}'
 const AGENT_USAGE_PAGE_SIZE = 100
 
 export type AgentPublishScope = 'private' | 'public' | 'specified'
 export type AgentCategoryKey = 'official' | 'enterprise' | 'collaboration' | 'mine'
+export type AgentSavedKey = 'favorite' | 'subscribed'
+
+export type AgentSubscription = { value: false } | { value: true; isFavorite: boolean }
 
 export interface DiscoverAgentItem {
   agentId: string
   creatorUserId: string
-  tenantId: number | null
+  tenantId: string | null
   agentName: string
   description: string
   avatarUrl: string | null
   isActive: boolean
   publishScope: AgentPublishScope | null
-  authorizedUserIds: string[]
+  subscription: AgentSubscription | null
   createdAt: string
   updatedAt: string
 }
@@ -31,15 +36,32 @@ export interface AgentUsageLog {
   usedAt: string
 }
 
-type VisibleAgentsResponse = {
+export type AgentSubscriptionState = { agentId: string; subscription: AgentSubscription }
+
+export class AgentRequestError extends Error {
+  constructor(message: string, readonly code: string, readonly status: number) {
+    super(message)
+    this.name = 'AgentRequestError'
+  }
+}
+
+type AgentResponse<Data> = {
   success?: boolean
   code?: number | string
   msg?: string
-  message?: string
-  data?: {
-    agents?: unknown[]
-    total?: number
+  detail?: unknown
+  data?: Data | null
+}
+
+function agentRequestError(response: Response, payload: AgentResponse<unknown> | null, fallback: string): AgentRequestError {
+  const code = String(payload?.code ?? 'AGENT_REQUEST_FAILED')
+  if (response.status === 403 && code === 'IDENTITY_ACCESS_DENIED') {
+    // 只有身份不匹配的 403 走登录失效处理。
+    handleUnauthorizedResponse(response, { code: '401' })
   }
+  const message = typeof payload?.msg === 'string' ? payload.msg.trim() : ''
+  const detail = typeof payload?.detail === 'string' ? payload.detail.trim() : ''
+  return new AgentRequestError(message || detail || fallback, code, response.status)
 }
 
 type AgentUsageLogsResponse = {
@@ -68,6 +90,15 @@ function getRequiredUserId(): string {
   return userId
 }
 
+function normalizeSubscription(input: unknown): AgentSubscription | null {
+  if (!input || typeof input !== 'object') return null
+  const { value, is_favorite } = input as Record<string, unknown>
+  if (value === false) return { value: false }
+  if (value !== true || (is_favorite !== undefined && typeof is_favorite !== 'boolean')) return null
+  // 历史订阅缺少收藏标志，按接口约定显示为未收藏。
+  return { value: true, isFavorite: is_favorite === true }
+}
+
 function normalizeVisibleAgent(item: unknown): DiscoverAgentItem | null {
   if (!item || typeof item !== 'object') {
     return null
@@ -84,72 +115,103 @@ function normalizeVisibleAgent(item: unknown): DiscoverAgentItem | null {
   return {
     agentId,
     creatorUserId: typeof record.creator_user_id === 'string' ? record.creator_user_id : '',
-    tenantId: typeof record.tenant_id === 'number' ? record.tenant_id : null,
+    tenantId: typeof record.tenant_id === 'string' || typeof record.tenant_id === 'number' ? String(record.tenant_id) : null,
     agentName,
     description: typeof record.description === 'string' ? record.description : '',
     avatarUrl: typeof record.avatar_url === 'string' ? record.avatar_url : null,
     isActive: Boolean(record.is_active),
     publishScope: typeof record.publish_scope === 'string' ? record.publish_scope as AgentPublishScope : null,
-    authorizedUserIds: Array.isArray(record.authorized_user_ids)
-      ? record.authorized_user_ids.flatMap((value) => typeof value === 'string' && value ? [value] : [])
-      : [],
+    subscription: normalizeSubscription(record.is_subscribed),
     createdAt: typeof record.created_at === 'string' ? record.created_at : '',
     updatedAt: typeof record.updated_at === 'string' ? record.updated_at : '',
   }
 }
 
-export async function listVisibleAgents(
-  options: {
-    limit?: number
-    skip?: number
-    signal?: AbortSignal
-  } = {},
-): Promise<DiscoverAgentItem[]> {
+export async function listVisibleAgents(signal?: AbortSignal): Promise<DiscoverAgentItem[]> {
   const userId = getRequiredUserId()
-  const requestUrl = buildAiApiUrl(VISIBLE_AGENTS_PATH, {
-    user_id: userId,
-    limit: String(options.limit ?? 100),
-    skip: String(options.skip ?? 0),
-  })
+  const agents = new Map<string, DiscoverAgentItem>()
+  let skip = 0
 
-  const response = await authorizedFetch(requestUrl, {
-    method: 'GET',
-    headers: {
-      Accept: 'application/json',
-    },
-    signal: options.signal,
-  })
+  while (true) {
+    const requestUrl = buildAiApiUrl(VISIBLE_AGENTS_PATH, {
+      user_id: userId,
+      limit: String(VISIBLE_AGENTS_PAGE_SIZE),
+      skip: String(skip),
+    })
+    const response = await authorizedFetch(requestUrl, { method: 'GET', headers: { Accept: 'application/json' }, signal })
+    const payload = await response.json().catch(() => null) as AgentResponse<{ agents?: unknown[]; total?: number }> | null
 
-  if (!response.ok) {
-    throw new Error('获取可见智能体列表失败')
-  }
-
-  const payload = (await response.json()) as VisibleAgentsResponse
-
-  if (payload.success === false) {
-    throw new Error(payload.msg || payload.message || '获取可见智能体列表失败')
-  }
-
-  const rawAgents = Array.isArray(payload.data?.agents) ? payload.data?.agents : []
-  const uniqueAgentMap = new Map<string, DiscoverAgentItem>()
-
-  rawAgents.forEach((item) => {
-    const normalized = normalizeVisibleAgent(item)
-
-    if (!normalized || uniqueAgentMap.has(normalized.agentId)) {
-      return
+    if (!response.ok || payload?.success === false) {
+      throw agentRequestError(response, payload, '获取可见智能体列表失败')
     }
 
-    uniqueAgentMap.set(normalized.agentId, normalized)
-  })
+    const page = payload?.data?.agents
+    const total = payload?.data?.total
+    if (!Array.isArray(page) || typeof total !== 'number' || !Number.isSafeInteger(total) || total < 0) {
+      throw new AgentRequestError('可见智能体列表响应不完整', 'AGENT_LIST_RESPONSE_INVALID', response.status)
+    }
 
-  return [...uniqueAgentMap.values()]
+    for (const item of page) {
+      const agent = normalizeVisibleAgent(item)
+      if (agent && !agents.has(agent.agentId)) agents.set(agent.agentId, agent)
+    }
+    // 跳过数量按服务端原始页计算，不使用去重或筛选之后的条数。
+    skip += page.length
+    if (page.length === 0 || skip >= total) break
+  }
+
+  return [...agents.values()]
+}
+
+async function writeAgentPreference(
+  agentId: string,
+  operation: 'subscription' | 'favorite',
+  value: boolean,
+  signal?: AbortSignal,
+): Promise<AgentSubscriptionState> {
+  const label = operation === 'subscription' ? '订阅' : '收藏'
+  const body = operation === 'subscription' ? { is_subscribed: value } : { is_favorite: value }
+  const path = `${AGENT_PREFERENCE_PATH.replace('{agent_id}', encodeURIComponent(agentId))}/${operation}`
+  const requestUrl = buildAiApiUrl(path, { user_id: getRequiredUserId() })
+  const responseUnavailable = (status: number) => new AgentRequestError(`未确认智能体${label}结果`, 'AGENT_SUBSCRIPTION_RESPONSE_UNAVAILABLE', status)
+  const response = await authorizedFetch(requestUrl, {
+    method: 'PUT',
+    headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal,
+  }).catch((error: unknown) => {
+    if (signal?.aborted) throw error
+    throw responseUnavailable(0)
+  })
+  if (response.status === 408 || response.status === 504) throw responseUnavailable(response.status)
+
+  const payload = await response.json().catch(() => null) as AgentResponse<{
+    agent_id?: unknown
+    is_subscribed?: unknown
+  }> | null
+  if (!response.ok || payload?.success === false) {
+    throw agentRequestError(response, payload, `修改智能体${label}失败`)
+  }
+
+  const state = payload?.data
+  const subscription = normalizeSubscription(state?.is_subscribed)
+  if (payload?.success !== true || state?.agent_id !== agentId || !subscription) throw responseUnavailable(response.status)
+  return { agentId, subscription }
+}
+
+export function setAgentSubscription(agentId: string, value: boolean, signal?: AbortSignal) {
+  return writeAgentPreference(agentId, 'subscription', value, signal)
+}
+
+export function setAgentFavorite(agentId: string, value: boolean, signal?: AbortSignal) {
+  return writeAgentPreference(agentId, 'favorite', value, signal)
 }
 
 export function groupVisibleAgents(
   agents: DiscoverAgentItem[],
   currentUserId: string,
-): Record<AgentCategoryKey, DiscoverAgentItem[]> {
+): Record<AgentCategoryKey | AgentSavedKey, DiscoverAgentItem[]> {
+  const subscribed = agents.filter((agent) => agent.subscription?.value === true)
   return {
     official: agents.filter((agent) => (
       agent.tenantId === null &&
@@ -164,10 +226,12 @@ export function groupVisibleAgents(
     collaboration: agents.filter((agent) => (
       agent.tenantId !== null &&
       agent.publishScope === 'specified' &&
-      agent.authorizedUserIds.includes(currentUserId) &&
+      agent.creatorUserId !== currentUserId &&
       agent.isActive
     )),
     mine: agents.filter((agent) => agent.creatorUserId === currentUserId),
+    subscribed,
+    favorite: subscribed.filter((agent) => agent.subscription?.value && agent.subscription.isFavorite),
   }
 }
 

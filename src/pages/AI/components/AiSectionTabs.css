@@ -1,0 +1,46 @@
+.ai-section-tabs {
+  display: flex;
+  padding: 3px;
+  border: 1px solid #dfe3e8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ai-section-tabs-button {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 42px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #606873;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.ai-section-tabs-button[aria-selected='true'] {
+  background: #edf0f3;
+  color: #1f2329;
+}
+
+.ai-section-tabs-button + .ai-section-tabs-button {
+  margin-inline-start: 9px;
+}
+
+.ai-section-tabs-button + .ai-section-tabs-button::before {
+  position: absolute;
+  inset-block: 12px;
+  inset-inline-start: -5px;
+  content: '';
+  border-inline-start: 1px solid #dfe3e8;
+}
+
+.ai-section-tabs-button:focus-visible {
+  outline: 2px solid #384656;
+  outline-offset: -2px;
+}

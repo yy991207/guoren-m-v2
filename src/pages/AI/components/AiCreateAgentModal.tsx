@@ -6,7 +6,6 @@ import {
   fetchAgentTemplates,
   generateAgentTemplate,
   type AgentTemplateItem,
-  type GeneratedAgentTemplateRecommendedSkill,
 } from '../../../services/agentTemplates'
 import { AiBottomSheet } from './AiBottomSheet'
 
@@ -22,14 +21,6 @@ type AiCreateAgentModalProps = {
       category?: string
       question: string
       instruction: string
-    }>
-    selectedSkills?: Array<{
-      id: string
-      skillName: string
-      title: string
-      description: string
-      source: 'official' | 'clawhub' | 'added' | 'created'
-      tags: string[]
     }>
   }) => void
 }
@@ -61,6 +52,7 @@ export function AiCreateAgentModal({
   const [inputValue, setInputValue] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorText, setErrorText] = useState('')
+  const [statusText, setStatusText] = useState('')
   const [templates, setTemplates] = useState<AgentTemplateItem[]>([])
   const [templatesLoading, setTemplatesLoading] = useState(false)
   const [templateClicking, setTemplateClicking] = useState('')
@@ -81,53 +73,11 @@ export function AiCreateAgentModal({
     generationStartTimeRef.current = null
   }
 
-  const normalizeGeneratedSkillSource = (source: string): 'official' | 'clawhub' | 'added' | 'created' => {
-    return source === 'clawhub' ? 'clawhub' : 'official'
-  }
-
-  const buildGeneratedSelectedSkills = (skills: GeneratedAgentTemplateRecommendedSkill[]) => {
-    return skills.map((skill) => ({
-      id: skill.name,
-      skillName: skill.name,
-      title: skill.chineseName,
-      description: skill.description,
-      source: normalizeGeneratedSkillSource(skill.source),
-      tags: [],
-    }))
-  }
-
   const handleGenerationError = (message: string) => {
     setIsSubmitting(false)
+    setStatusText('')
     setErrorText(message)
     clearGenerationTask()
-  }
-
-  const handleGenerationSuccess = (taskId: string, result: {
-    agentName: string
-    description: string
-    agentPrompt: string
-    presetQuestions: Array<{
-      category?: string
-      question: string
-      instruction: string
-    }>
-    recommendedSkills: GeneratedAgentTemplateRecommendedSkill[]
-  }) => {
-    setIsSubmitting(false)
-    setErrorText('')
-    clearGenerationTask()
-    onUseTemplate?.({
-      agentName: result.agentName,
-      description: result.description,
-      instruction: result.agentPrompt,
-      presetQuestions: result.presetQuestions.map((item, index) => ({
-        id: `generated-${taskId}-question-${index}`,
-        category: item.category,
-        question: item.question,
-        instruction: item.instruction,
-      })),
-      selectedSkills: buildGeneratedSelectedSkills(result.recommendedSkills),
-    })
   }
 
   const pollTaskStatus = async (taskId: string) => {
@@ -146,18 +96,15 @@ export function AiCreateAgentModal({
         return
       }
 
-      if (taskState.phase === 'completed' && taskState.result) {
-        handleGenerationSuccess(taskId, taskState.result)
+      if (taskState.status === 'failed') {
+        handleGenerationError(taskState.message)
         return
       }
 
-      if (taskState.error) {
-        handleGenerationError(taskState.error)
-        return
-      }
-
-      if (taskState.isCompleted && !taskState.result) {
-        handleGenerationError('生成失败，请重试')
+      setStatusText(taskState.message)
+      if (taskState.status === 'completed') {
+        setIsSubmitting(false)
+        clearGenerationTask()
         return
       }
 
@@ -183,6 +130,7 @@ export function AiCreateAgentModal({
     generationStartTimeRef.current = Date.now()
     setIsSubmitting(true)
     setErrorText('')
+    setStatusText('')
 
     const controller = new AbortController()
     generationAbortRef.current = controller
@@ -207,6 +155,7 @@ export function AiCreateAgentModal({
       setInputValue('')
       setIsSubmitting(false)
       setErrorText('')
+      setStatusText('')
       clearGenerationTask()
       return
     }
@@ -374,10 +323,12 @@ export function AiCreateAgentModal({
           </button>
         </div>
 
-        {isSubmitting ? <div className="ai-create-agent-modal-loading-text">正在努力生成中...</div> : null}
+        {isSubmitting || statusText ? (
+          <div className="ai-create-agent-modal-loading-text" role="status">{statusText || '正在努力生成中...'}</div>
+        ) : null}
 
         {errorText ? (
-          <div className="ai-create-agent-modal-error-wrap">
+          <div className="ai-create-agent-modal-error-wrap" role="alert">
             <div className="ai-create-agent-modal-error-text">{errorText}</div>
             <button
               className="ai-create-agent-modal-retry-btn"

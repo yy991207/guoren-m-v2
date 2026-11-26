@@ -7,7 +7,6 @@ import { fetchCommands, mapCommandsToPromptItems, type CommandApiItem, type Comm
 import {
   ensureAgentUsageLog,
   groupVisibleAgents,
-  listVisibleAgents,
   type AgentCategoryKey,
   type DiscoverAgentItem,
 } from '../../services/agents'
@@ -79,6 +78,7 @@ import { AiNameAvatar } from './components/AiNameAvatar'
 import AiSidebarLibraryPage from './components/AiSidebarLibraryPage'
 import AiSkillDetailPage from './components/AiSkillDetailPage'
 import { useSkillCommunity } from './hooks/useSkillCommunity'
+import { useDiscoverAgents } from './hooks/useDiscoverAgents'
 import { resolveArtifactPreviewUrl, useAiChatRuntime, type ActiveAgentContext } from './hooks/useAiChatRuntime'
 import {
   normalizeSessionArtifactPreviewFilePath,
@@ -413,12 +413,11 @@ export default function AIPage({
   const [userSkills, setUserSkills] = useState<SkillSummaryItem[]>([])
   const [userSkillsLoading, setUserSkillsLoading] = useState(false)
   const [userSkillsError, setUserSkillsError] = useState('')
-  const [visibleAgents, setVisibleAgents] = useState<DiscoverAgentItem[]>([])
+  const { visibleAgents, setVisibleAgents, discoverLoading, discoverError, refreshVisibleAgents,
+    pendingAgentIds, changeSubscription, changeFavorite } = useDiscoverAgents(workspaceTab === 'agents')
   const [deleteTargetSession, setDeleteTargetSession] = useState<ChatSession | null>(null)
   const [deleteSessionLoading, setDeleteSessionLoading] = useState(false)
   const [removingSessionIds, setRemovingSessionIds] = useState<Set<string>>(new Set())
-  const [discoverLoading, setDiscoverLoading] = useState(false)
-  const [discoverError, setDiscoverError] = useState('')
   const [libraryFiles, setLibraryFiles] = useState<LibraryResourceFile[]>([])
   const [libraryLoading, setLibraryLoading] = useState(false)
   const [libraryError, setLibraryError] = useState('')
@@ -734,23 +733,6 @@ export default function AIPage({
     setShowCreateAgentModal(false)
     setShowAgentConfigPage(true)
   }
-
-  const refreshVisibleAgents = useCallback(async (signal?: AbortSignal) => {
-    setDiscoverLoading(true)
-    setDiscoverError('')
-
-    try {
-      setVisibleAgents(await listVisibleAgents({ limit: 100, skip: 0, signal }))
-    } catch (error) {
-      if (!signal?.aborted) {
-        setDiscoverError(error instanceof Error ? error.message : '智能体列表加载失败')
-      }
-    } finally {
-      if (!signal?.aborted) {
-        setDiscoverLoading(false)
-      }
-    }
-  }, [])
 
   const handleAgentPublishSuccess = useCallback(async (payload: AiAgentPublishSuccessPayload) => {
     try {
@@ -1352,15 +1334,6 @@ export default function AIPage({
   }, [showSkillSelectorPage])
 
   useEffect(() => {
-    const controller = new AbortController()
-    void refreshVisibleAgents(controller.signal)
-
-    return () => {
-      controller.abort()
-    }
-  }, [refreshVisibleAgents])
-
-  useEffect(() => {
     if (!showLibraryPage) {
       return
     }
@@ -1689,6 +1662,7 @@ export default function AIPage({
   }
 
   const openAgentChat = async (agent: DiscoverAgentItem) => {
+    if (!agent.isActive) return
     await openCustomAgentConversation({
       agentId: agent.agentId,
     })
@@ -1979,6 +1953,10 @@ export default function AIPage({
               discoverLoading={discoverLoading}
               discoverError={discoverError}
               discoverSections={discoverSections}
+              savedAgents={groupedDiscoverAgents}
+              pendingAgentIds={pendingAgentIds}
+              onChangeSubscription={changeSubscription}
+              onChangeFavorite={changeFavorite}
               onOpenAgentChat={openAgentChat}
               onOpenCreateAgent={() => setShowCreateAgentModal(true)}
               onBack={closeNavigationOverlays}

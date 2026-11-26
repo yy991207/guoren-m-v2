@@ -1881,6 +1881,14 @@
   flex: 1;
 }
 
+.ai-discover-saved {
+  margin-top: 12px;
+}
+
+.ai-discover-saved .ai-discover-section {
+  margin-top: 10px;
+}
+
 .ai-discover-create-btn {
   height: 38px;
   padding: 0 14px;
@@ -1924,6 +1932,7 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  margin-inline-start: auto;
 }
 
 .ai-discover-section-switch-btn {
@@ -1983,9 +1992,10 @@
 }
 
 .ai-discover-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px 12px;
   padding: 12px;
   border-radius: 12px;
   background: #fff;
@@ -2056,6 +2066,37 @@
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.ai-discover-card-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-discover-card-action {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #e2e5e9;
+  border-radius: 8px;
+  background: #fff;
+  color: #353b42;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ai-discover-card-action.is-primary {
+  border-color: #22262b;
+  background: #22262b;
+  color: #fff;
+}
+
+.ai-discover-card-action:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .ai-create-agent-modal {

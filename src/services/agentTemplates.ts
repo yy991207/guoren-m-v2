@@ -28,40 +28,14 @@ export type AgentTemplateDetail = {
   presetQuestions: AgentTemplatePresetQuestion[]
 }
 
-export type GeneratedAgentTemplatePresetQuestion = {
-  category?: string
-  question: string
-  instruction: string
-}
-
-export type GeneratedAgentTemplateRecommendedSkill = {
-  name: string
-  chineseName: string
-  description: string
-  source: string
-  template: string | null
-}
-
-export type AgentTemplateTaskResult = {
-  agentName: string
-  description: string
-  agentPrompt: string
-  presetQuestions: GeneratedAgentTemplatePresetQuestion[]
-  recommendedSkills: GeneratedAgentTemplateRecommendedSkill[]
-}
-
 export type GenerateAgentTemplateSubmission = {
   taskId: string
   status: string
 }
 
 export type AgentTemplateTaskState = {
-  taskId: string
-  status: string
-  phase: string
-  isCompleted: boolean
-  error: string | null
-  result: AgentTemplateTaskResult | null
+  status: 'running' | 'completed' | 'failed'
+  message: string
 }
 
 type AgentTemplatesResponse = {
@@ -93,10 +67,8 @@ type GenerateAgentTemplateResponse = {
 }
 
 type AgentTemplateTaskResponse = {
-  success?: boolean
-  msg?: string
-  message?: string
-  data?: unknown
+  status?: unknown
+  msg?: unknown
 }
 
 function getRequiredUserId(): string {
@@ -172,101 +144,6 @@ function normalizeTemplateDetail(value: unknown): AgentTemplateDetail | null {
   }
 }
 
-function normalizeGeneratedPresetQuestion(value: unknown): GeneratedAgentTemplatePresetQuestion | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const question = typeof record.question === 'string' ? record.question.trim() : ''
-
-  if (!question) {
-    return null
-  }
-
-  const category = typeof record.category === 'string' ? record.category.trim() : ''
-
-  return {
-    category: category || undefined,
-    question,
-    instruction: typeof record.instruction === 'string' ? record.instruction.trim() : '',
-  }
-}
-
-function normalizeGeneratedRecommendedSkill(value: unknown): GeneratedAgentTemplateRecommendedSkill | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const name = typeof record.name === 'string' ? record.name.trim() : ''
-
-  if (!name) {
-    return null
-  }
-
-  return {
-    name,
-    chineseName: typeof record.chinese_name === 'string' && record.chinese_name.trim() ? record.chinese_name.trim() : name,
-    description: typeof record.description === 'string' ? record.description.trim() : '',
-    source: typeof record.source === 'string' ? record.source.trim() : '',
-    template: typeof record.template === 'string' ? record.template : null,
-  }
-}
-
-function normalizeGeneratedTaskResult(value: unknown): AgentTemplateTaskResult | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const agentName = typeof record.agent_name === 'string' ? record.agent_name.trim() : ''
-
-  if (!agentName) {
-    return null
-  }
-
-  return {
-    agentName,
-    description: typeof record.description === 'string' ? record.description.trim() : '',
-    agentPrompt: typeof record.agent_prompt === 'string' ? record.agent_prompt.trim() : '',
-    presetQuestions: Array.isArray(record.preset_questions)
-      ? record.preset_questions.flatMap((item) => {
-          const normalized = normalizeGeneratedPresetQuestion(item)
-          return normalized ? [normalized] : []
-        })
-      : [],
-    recommendedSkills: Array.isArray(record.recommended_skills)
-      ? record.recommended_skills.flatMap((item) => {
-          const normalized = normalizeGeneratedRecommendedSkill(item)
-          return normalized ? [normalized] : []
-        })
-      : [],
-  }
-}
-
-function normalizeAgentTemplateTaskState(value: unknown): AgentTemplateTaskState | null {
-  if (!value || typeof value !== 'object') {
-    return null
-  }
-
-  const record = value as Record<string, unknown>
-  const taskId = typeof record.task_id === 'string' ? record.task_id.trim() : ''
-
-  if (!taskId) {
-    return null
-  }
-
-  return {
-    taskId,
-    status: typeof record.status === 'string' ? record.status.trim() : '',
-    phase: typeof record.phase === 'string' ? record.phase.trim() : '',
-    isCompleted: record.is_completed === true,
-    error: typeof record.error === 'string' && record.error.trim() ? record.error.trim() : null,
-    result: normalizeGeneratedTaskResult(record.result),
-  }
-}
-
 export async function generateAgentTemplate(
   inputText: string,
   signal?: AbortSignal,
@@ -326,23 +203,20 @@ export async function fetchAgentTemplateTask(
     signal,
   })
 
-  const result = await response.json() as AgentTemplateTaskResponse
+  const result = await response.json().catch(() => null) as AgentTemplateTaskResponse | null
+  const status = result?.status
+  const message = typeof result?.msg === 'string' ? result.msg.trim() : ''
 
   if (!response.ok) {
-    throw new Error(result.msg || result.message || '获取模板任务状态失败')
+    throw new Error(message || '获取模板任务状态失败')
   }
 
-  if (result.success === false) {
-    throw new Error(result.msg || result.message || '获取模板任务状态失败')
-  }
-
-  const taskState = normalizeAgentTemplateTaskState(result.data)
-
-  if (!taskState) {
+  if (!message || (status !== 'running' && status !== 'completed' && status !== 'failed')) {
     throw new Error('模板任务状态数据不完整')
   }
 
-  return taskState
+  // 完成仅代表生成任务结束，查询接口不再返回配置草稿。
+  return { status, message }
 }
 
 export async function fetchAgentTemplates(signal?: AbortSignal): Promise<AgentTemplateItem[]> {

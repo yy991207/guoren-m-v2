@@ -1,7 +1,13 @@
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { cleanup, createEvent, fireEvent, render, screen, within } from '@testing-library/react'
+import { ImageViewer } from 'antd-mobile'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { AiSentAttachments } from '../AiSentAttachments'
 import { FilePreviewRenderer } from './file-preview-renderer'
+
+vi.mock('antd-mobile', async (load) => {
+  const actual = await load<typeof import('antd-mobile')>()
+  return { ...actual, ImageViewer: vi.fn(actual.ImageViewer) }
+})
 
 const methods = ['showModal', 'close'] as const
 const original = methods.map((method) => Object.getOwnPropertyDescriptor(HTMLDialogElement.prototype, method))
@@ -54,6 +60,36 @@ describe('独立图片大图查看', () => {
     expect(within(dialog).getByAltText('第二张.png')).toHaveAttribute('src', '/images/second.png')
     fireEvent.click(within(dialog).getByRole('button', { name: '关闭大图' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('大图手势结束不先拆弹层，等 click 被拦下再关闭', () => {
+    const onPageClick = vi.fn()
+    render(<div onClick={onPageClick}><FilePreviewRenderer {...imageProps} /></div>)
+    fireEvent.click(screen.getByRole('button', { name: '查看大图：配图.png' }))
+    onPageClick.mockClear()
+    const dialog = screen.getByRole('dialog', { name: '大图：配图.png' })
+    const image = within(dialog).getByAltText('配图.png')
+    const markTap = vi.mocked(ImageViewer).mock.lastCall?.[0].onClose
+    expect(markTap).toBeTypeOf('function')
+    markTap?.()
+    expect(dialog).toHaveAttribute('open')
+
+    const event = createEvent.click(image)
+    fireEvent(image, event)
+    expect(event.defaultPrevented).toBe(true)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(onPageClick).not.toHaveBeenCalled()
+  })
+
+  it('未产生 click 的旧手势不会让下一次交互误关大图', () => {
+    render(<FilePreviewRenderer {...imageProps} />)
+    fireEvent.click(screen.getByRole('button', { name: '查看大图：配图.png' }))
+    const dialog = screen.getByRole('dialog', { name: '大图：配图.png' })
+    vi.mocked(ImageViewer).mock.lastCall?.[0].onClose?.()
+    const image = within(dialog).getByAltText('配图.png')
+    fireEvent.pointerDown(image)
+    fireEvent.click(image)
+    expect(dialog).toHaveAttribute('open')
   })
 
   it('切换图片不保留上一张的大图状态', () => {
