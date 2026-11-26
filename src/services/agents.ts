@@ -9,8 +9,7 @@ const AGENT_USAGE_LOG_DETAIL_PATH = '/api/v1/custom-agents/usage-logs/{agent_id}
 const AGENT_USAGE_PAGE_SIZE = 100
 
 export type AgentPublishScope = 'private' | 'public' | 'specified'
-export type AgentCategoryKey = 'official' | 'enterprise' | 'collaboration' | 'mine'
-export type AgentSavedKey = 'favorite' | 'subscribed'
+export type AgentCategoryKey = 'subscribed' | 'official' | 'enterprise' | 'collaboration' | 'mine'
 
 export type AgentSubscription = { value: false } | { value: true; isFavorite: boolean }
 
@@ -210,7 +209,7 @@ export function setAgentFavorite(agentId: string, value: boolean, signal?: Abort
 export function groupVisibleAgents(
   agents: DiscoverAgentItem[],
   currentUserId: string,
-): Record<AgentCategoryKey | AgentSavedKey, DiscoverAgentItem[]> {
+): Record<AgentCategoryKey | 'favorite', DiscoverAgentItem[]> {
   const subscribed = agents.filter((agent) => agent.subscription?.value === true)
   return {
     official: agents.filter((agent) => (

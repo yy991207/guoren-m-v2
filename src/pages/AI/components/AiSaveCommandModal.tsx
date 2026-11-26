@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ChangeEvent } from 'react'
+import { AiLoading } from './AiLoading'
 import { Toast } from 'antd-mobile'
 
 import { createCommand, generateCommandFromSession, type CreateCommandRequest } from '../../../services/commands'
@@ -117,11 +118,10 @@ export function AiSaveCommandModal({
         {phase === 'loading' ? (
           <div className="ai-save-command-modal-loading">
             <div className="ai-save-command-modal-loading-badge">指令</div>
-            <div className="ai-save-command-modal-loading-title">正在生成指令模板</div>
+            <AiLoading message="正在生成指令模板" />
             <div className="ai-save-command-modal-loading-subtitle">
               AI 正在分析当前会话内容，提取关键指令...
             </div>
-            <div aria-hidden="true" className="ai-save-command-modal-loading-spinner" />
           </div>
         ) : (
           <>

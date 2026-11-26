@@ -3,6 +3,7 @@ import { SetOutline } from 'antd-mobile-icons'
 import type { ChatMessage } from '../../../services/chat/types'
 import type { SelectedArtifact } from '../hooks/useAiChatRuntime'
 import { AiAgentConversationPreview } from './AiAgentConversationPreview'
+import { AiLoading } from './AiLoading'
 import { AiConversationHeading } from './AiConversationHeading'
 
 type AiCustomAgentConversationQuestion = {
@@ -80,9 +81,9 @@ export function AiCustomAgentConversationPage({
           <div aria-hidden="true" className="ai-agent-config-header-spacer" />
         </div>
 
-        <div className="ai-custom-agent-conversation-status">
-          {loading ? '智能体加载中…' : error || '智能体加载失败'}
-        </div>
+        {loading ? <AiLoading message="智能体加载中…" variant="page" /> : (
+          <div className="ai-custom-agent-conversation-status" role="alert">{error || '智能体加载失败'}</div>
+        )}
       </div>
     )
   }

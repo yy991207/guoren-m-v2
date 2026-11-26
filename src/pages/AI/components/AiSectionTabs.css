@@ -44,3 +44,39 @@
   outline: 2px solid #384656;
   outline-offset: -2px;
 }
+
+.ai-section-tabs[data-variant='chips'] {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.ai-section-tabs[data-variant='chips']::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-section-tabs[data-variant='chips'] > .ai-section-tabs-button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  margin-inline-start: 0;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.ai-section-tabs[data-variant='chips'] > .ai-section-tabs-button::before {
+  content: none;
+}
+
+.ai-section-tabs[data-variant='chips'] > .ai-section-tabs-button[aria-selected='true'] {
+  background: #e7e9ec;
+  font-weight: 600;
+}

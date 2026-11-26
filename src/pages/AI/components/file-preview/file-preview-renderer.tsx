@@ -1,7 +1,7 @@
-import { DotLoading } from 'antd-mobile'
 import { useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { AiLoading } from '../AiLoading'
 import { parseCourseTableArtifact, type CourseTableArtifact } from './course-table'
 import type { PreviewLanguage } from './preview-language'
 import { ZoomableImagePreview } from './zoomable-image-preview'
@@ -68,13 +68,16 @@ export function FilePreviewRenderer({
 }: FilePreviewRendererProps) {
   const courseTable = useMemo(() => language === 'json' && content ? parseCourseTableArtifact(content) : null, [content, language])
 
-  if (loading || errorMessage) {
+  if (loading) {
+    return <div className={styles.previewLoading}><AiLoading message="正在加载文件内容，请稍候" variant="page" /></div>
+  }
+
+  if (errorMessage) {
     return (
-      <div className={styles.previewLoading} role={loading ? 'status' : 'alert'}>
+      <div className={styles.previewLoading} role="alert">
         <div className={styles.previewLoadingCard}>
-          {loading && <DotLoading aria-hidden="true" />}
-          <div className={styles.previewLoadingTitle}>{loading ? '加载中' : '预览失败'}</div>
-          <div className={styles.previewLoadingText}>{loading ? '正在加载文件内容，请稍候' : errorMessage}</div>
+          <div className={styles.previewLoadingTitle}>预览失败</div>
+          <div className={styles.previewLoadingText}>{errorMessage}</div>
         </div>
       </div>
     )

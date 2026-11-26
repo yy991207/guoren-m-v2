@@ -8,6 +8,7 @@ import {
   type AgentTemplateItem,
 } from '../../../services/agentTemplates'
 import { AiBottomSheet } from './AiBottomSheet'
+import { AiLoading } from './AiLoading'
 
 type AiCreateAgentModalProps = {
   visible: boolean
@@ -347,7 +348,7 @@ export function AiCreateAgentModal({
             <div className="ai-create-agent-modal-templates-title">没有灵感？试试果仁模板~</div>
             <div className="ai-create-agent-modal-templates">
               {templatesLoading ? (
-                <div className="ai-create-agent-modal-templates-state">模板加载中...</div>
+                <AiLoading message="模板加载中…" />
               ) : templates.length === 0 ? (
                 <div className="ai-create-agent-modal-templates-state">暂无模板</div>
               ) : (

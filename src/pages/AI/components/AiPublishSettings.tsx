@@ -4,6 +4,7 @@ import type { AgentPublishScope } from '../../../services/agents'
 import { fetchSquareCategoryModules, type SquareCategory } from '../../../services/aiCommunity'
 import type { OrgUserItem } from '../../../services/aiOrgMembers'
 import { AiOrgMemberPicker } from './AiOrgMemberPicker'
+import { AiLoading } from './AiLoading'
 
 type AiPublishSettingsProps = {
   publishScope: AgentPublishScope
@@ -175,7 +176,7 @@ export function AiPublishSettings({
         {isPublishingToCommunity ? (
           <div className="ai-publish-settings-community-panel">
             {communityLoading ? (
-              <div className="ai-publish-settings-status">研习社分类加载中…</div>
+              <AiLoading message="研习社分类加载中…" />
             ) : communityError ? (
               <div className="ai-publish-settings-status is-error">{communityError}</div>
             ) : (

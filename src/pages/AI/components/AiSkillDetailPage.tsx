@@ -10,6 +10,7 @@ import {
   type SkillSummaryItem,
 } from '../../../services/skills'
 import { AiNameAvatar } from './AiNameAvatar'
+import { AiLoading } from './AiLoading'
 import './AiSkillDetailPage.css'
 
 type AiSkillDetailPageProps = {
@@ -212,7 +213,7 @@ export default function AiSkillDetailPage({
       </div>
 
       <div className="ai-skill-detail-content">
-        {loading ? <div className="ai-skill-detail-status">技能详情加载中…</div> : null}
+        {loading ? <AiLoading message="技能详情加载中…" variant="page" /> : null}
         {!loading && error ? <div className="ai-skill-detail-status">{error}</div> : null}
 
         {!loading && !error ? (

@@ -60,6 +60,7 @@ import { AiConversationHeaderActions } from './components/AiConversationHeaderAc
 import { AiConversationHeading } from './components/AiConversationHeading'
 import { AiCreateAgentModal } from './components/AiCreateAgentModal'
 import { AiDiscoverPage } from './components/AiDiscoverPage'
+import { AiLoading } from './components/AiLoading'
 import { AiDrawerSessionGroup } from './components/AiDrawerSessionGroup'
 import { AiSaveCommandModal } from './components/AiSaveCommandModal'
 import AiLibraryFilePreview from './components/AiLibraryFilePreview'
@@ -1038,6 +1039,7 @@ export default function AIPage({
     title: string
     items: DiscoverAgentItem[]
   }>>(() => ([
+    { key: 'subscribed', title: '订阅', items: groupedDiscoverAgents.subscribed },
     { key: 'official', title: '官方智能体', items: groupedDiscoverAgents.official },
     { key: 'enterprise', title: '企业智能体', items: groupedDiscoverAgents.enterprise },
     { key: 'collaboration', title: '共创', items: groupedDiscoverAgents.collaboration },
@@ -1960,10 +1962,11 @@ export default function AIPage({
 
           {workspaceTab === 'agents' && (
             <AiDiscoverPage
+              allAgents={visibleAgents}
               discoverLoading={discoverLoading}
               discoverError={discoverError}
               discoverSections={discoverSections}
-              savedAgents={groupedDiscoverAgents}
+              favoriteAgents={groupedDiscoverAgents.favorite}
               pendingAgentIds={pendingAgentIds}
               onChangeSubscription={changeSubscription}
               onChangeFavorite={changeFavorite}
@@ -2021,7 +2024,7 @@ export default function AIPage({
                     </div>
 
                     <div className="ai-skill-community-featured-list">
-                      {official.loading ? <div className="ai-data-status">技能加载中…</div> : null}
+                      {official.loading ? <AiLoading message="技能加载中…" /> : null}
                       {official.error ? <div className="ai-data-status">{official.error}</div> : null}
                       {!official.loading && !official.error && featuredSkills.length === 0 ? <div className="ai-data-status">暂无精选技能</div> : null}
                       {featuredSkills.map((skill) => (
@@ -2062,7 +2065,7 @@ export default function AIPage({
                         </button>
                       </div>
                       <div className="ai-skill-community-all-list">
-                        {clawhub.loading ? <div className="ai-data-status">ClawHub 技能加载中…</div> : null}
+                        {clawhub.loading ? <AiLoading message="ClawHub 技能加载中…" /> : null}
                         {clawhub.error ? <div className="ai-data-status">{clawhub.error}</div> : null}
                         {!clawhub.loading && !clawhub.error && filteredClawhubSkills.length === 0 ? <div className="ai-data-status">暂无 ClawHub 技能</div> : null}
                         {visibleClawhubSkills.map((skill) => (
@@ -2130,7 +2133,7 @@ export default function AIPage({
               />
 
               <div className={`ai-my-skills-list ${!mySkillsLoading && !mySkillsError && visibleManageSkills.length === 0 ? 'is-empty' : ''}`}>
-                {mySkillsLoading ? <div className="ai-data-status">我的技能加载中…</div> : null}
+                {mySkillsLoading ? <AiLoading message="我的技能加载中…" variant="page" /> : null}
                 {!mySkillsLoading && mySkillsError ? <div className="ai-data-status">{mySkillsError}</div> : null}
                 {!mySkillsLoading && !mySkillsError && visibleManageSkills.length === 0 ? <div className="ai-data-status">暂无技能数据</div> : null}
                 {!mySkillsLoading && !mySkillsError && visibleManageSkills.map((skill) => (
@@ -2285,7 +2288,7 @@ export default function AIPage({
             </button>
           </div>
 
-          {partnerLoading ? <div className="ai-partner-settings-status">配置加载中...</div> : null}
+          {partnerLoading ? <AiLoading message="配置加载中…" /> : null}
           {partnerError ? <div className="ai-partner-settings-status is-error">{partnerError}</div> : null}
 
           <div className="ai-partner-settings-body">
@@ -2372,7 +2375,7 @@ export default function AIPage({
                   <div className="ai-drawer-section">
                     <div className="ai-drawer-section-title">对话历史</div>
                     {isLoadingSessions ? (
-                      <div className="ai-drawer-chat-empty">正在刷新会话…</div>
+                      <AiLoading message="正在刷新会话…" />
                     ) : !hasGroupedSessions ? (
                       <div className="ai-drawer-chat-empty">还没有历史会话</div>
                     ) : (
@@ -2565,7 +2568,7 @@ export default function AIPage({
 
           <div className="library-content ai-library-picker-content">
             <div className="library-list">
-              {libraryLoading ? <div className="library-empty">资料库加载中...</div> : null}
+              {libraryLoading ? <AiLoading message="资料库加载中…" variant="page" /> : null}
               {!libraryLoading && libraryError ? <div className="library-empty">{libraryError}</div> : null}
               {!libraryLoading && !libraryError && visibleLibraryItems.length === 0 ? (
                 <div className="library-empty">
@@ -2714,7 +2717,7 @@ export default function AIPage({
           />
 
           <div className="ai-chat-skill-picker-list">
-            {userSkillsLoading ? <div className="ai-data-status">技能加载中…</div> : null}
+            {userSkillsLoading ? <AiLoading message="技能加载中…" /> : null}
             {!userSkillsLoading && userSkillsError ? <div className="ai-data-status">{userSkillsError}</div> : null}
             {!userSkillsLoading && !userSkillsError && visibleSelectableSkills.length === 0 ? <div className="ai-data-status">暂无可用技能</div> : null}
             {!userSkillsLoading && !userSkillsError && visibleSelectableSkills.map((skill) => {

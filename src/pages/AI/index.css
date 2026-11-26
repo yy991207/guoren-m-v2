@@ -207,28 +207,11 @@
   padding: 0 14px;
 }
 
-.ai-save-command-modal-loading-title {
-  font-size: 22px;
-  line-height: 1.4;
-  font-weight: 700;
-  color: #111827;
-}
-
 .ai-save-command-modal-loading-subtitle {
   max-width: 260px;
   font-size: 14px;
   line-height: 1.7;
   color: #6b7280;
-}
-
-.ai-save-command-modal-loading-spinner {
-  width: 34px;
-  height: 34px;
-  margin-top: 8px;
-  border-radius: 50%;
-  border: 3px solid rgba(232, 116, 74, 0.18);
-  border-top-color: #e8734a;
-  animation: ai-save-command-modal-spin 0.9s linear infinite;
 }
 
 .ai-save-command-modal-header {
@@ -335,16 +318,6 @@
 
 .ai-save-command-modal-button:disabled {
   opacity: 0.56;
-}
-
-@keyframes ai-save-command-modal-spin {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* 欢迎语 */
@@ -1864,18 +1837,6 @@
   flex: 1;
 }
 
-.ai-discover-saved {
-  margin-top: 12px;
-}
-
-.ai-discover-saved > .ai-section-tabs {
-  inline-size: 50%;
-}
-
-.ai-discover-saved .ai-discover-section {
-  margin-top: 10px;
-}
-
 .ai-discover-create-btn {
   height: 38px;
   padding: 0 14px;
@@ -1893,78 +1854,22 @@
   flex-shrink: 0;
 }
 
-.ai-discover-section-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #222;
-  margin: 0;
+.ai-discover-categories {
+  margin-top: 12px;
 }
 
-.ai-discover-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-}
-
-.ai-discover-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ai-discover-section-switch {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-  margin-inline-start: auto;
-}
-
-.ai-discover-section-switch-btn {
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: #8b9099;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.ai-discover-section-switch-btn.is-emphasis {
-  width: 34px;
-  height: 34px;
-  border: 1px solid #d7dde6;
-  border-radius: 8px;
-  background: #fff;
-  color: #717784;
-  box-shadow: 0 1px 6px rgba(15, 23, 42, 0.06);
-}
-
-.ai-discover-section-switch-btn:disabled {
-  opacity: 0.5;
-}
-
-.ai-discover-section-switch-btn:not(:disabled) {
-  cursor: pointer;
-}
-
-.ai-discover-section-switch-btn:not(:disabled):active {
-  background: #f4f6f8;
-  border-color: #c9d1db;
+.ai-discover-panel {
+  margin-top: 8px;
 }
 
 .ai-discover-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
 }
 
 .ai-discover-empty-state {
+  grid-column: 1 / -1;
   min-height: 92px;
   border: 1px dashed #d9dee7;
   border-radius: 12px;
@@ -1976,114 +1881,6 @@
   color: #8b9099;
   font-size: 14px;
   text-align: center;
-}
-
-.ai-discover-card {
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr);
-  align-items: start;
-  gap: 8px 12px;
-  padding: 12px;
-  border-radius: 12px;
-  background: #fff;
-  border: 1px solid #f0f1f3;
-  width: 100%;
-  text-align: left;
-}
-
-.ai-discover-card-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.ai-discover-card-avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.ai-discover-card-body {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.ai-discover-card-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: #222;
-  line-height: 1.4;
-}
-
-.ai-discover-card-desc {
-  font-size: 13px;
-  color: #999;
-  line-height: 1.4;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.ai-discover-card-meta {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 13px;
-  color: #999;
-}
-
-.ai-discover-card-author {
-  color: #999;
-}
-
-.ai-discover-card-chats {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.ai-discover-card-actions {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.ai-discover-card-action {
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid #e2e5e9;
-  border-radius: 8px;
-  background: #fff;
-  color: #353b42;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.ai-discover-card-action.is-primary {
-  border-color: #22262b;
-  background: #22262b;
-  color: #fff;
-}
-
-.ai-discover-card-action:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 .ai-create-agent-modal {
@@ -3524,11 +3321,18 @@
   transform: translateY(50%);
 }
 
+.ai-agent-profile-sheet-note {
+  margin: 12px 0 0;
+  color: #616a76;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .ai-agent-profile-sheet-footer {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-top: 18px;
+  margin-top: 12px;
 }
 
 .ai-agent-profile-sheet-cancel,

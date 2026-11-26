@@ -41,7 +41,8 @@ describe('AI 文件预览入口', () => {
     let finish!: (value: string) => void
     vi.mocked(fetchLibraryPreviewContent).mockReturnValueOnce(new Promise((resolve) => { finish = resolve }))
     const { rerender } = openArtifact()
-    expect(screen.getByRole('status')).toHaveTextContent('加载中')
+    expect(screen.getByRole('status')).toHaveClass('ai-loading')
+    expect(screen.getByRole('status')).toHaveTextContent('正在加载文件内容，请稍候')
     expect(screen.queryByRole('button', { name: '查看对话' })).not.toBeInTheDocument()
     const signal = vi.mocked(fetchLibraryPreviewContent).mock.calls[0][1]
     const image = { ...detail, fileId: 'f2', fileName: '配图.png', fileUrl: '/images/chart.png' }

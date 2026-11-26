@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AiLoading } from './AiLoading'
 import { Toast } from 'antd-mobile'
 
 import type { KnowledgeSpaceOption } from '../../../services/library'
@@ -1365,7 +1366,7 @@ export function AiAgentConfigPage({
 
           {skillSheetView === 'recommended' ? (
             <>
-              {recommendedSkillsLoading ? <div className="ai-selection-sheet-status">加载中…</div> : null}
+              {recommendedSkillsLoading ? <AiLoading message="加载中…" /> : null}
               {!recommendedSkillsLoading && recommendedSkillsError ? <div className="ai-selection-sheet-status is-error">{recommendedSkillsError}</div> : null}
               {!recommendedSkillsLoading && !recommendedSkillsError && recommendedSkillOptions.length === 0 ? (
                 <div className="ai-selection-sheet-status">暂无推荐技能</div>
@@ -1376,7 +1377,7 @@ export function AiAgentConfigPage({
             </>
           ) : (
             <>
-              {activeSkillSheetLoading ? <div className="ai-selection-sheet-status">加载中…</div> : null}
+              {activeSkillSheetLoading ? <AiLoading message="加载中…" /> : null}
               {!activeSkillSheetLoading && activeSkillSheetError ? <div className="ai-selection-sheet-status is-error">{activeSkillSheetError}</div> : null}
               {!activeSkillSheetLoading && !activeSkillSheetError && activeSkillSheetOptions.length === 0 ? (
                 <div className="ai-selection-sheet-status">{activeSkillSheetEmptyText}</div>

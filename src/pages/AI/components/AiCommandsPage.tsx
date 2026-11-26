@@ -1,4 +1,5 @@
 import { AiScrollScope } from './scrollbars/AiScrollScope'
+import { AiLoading } from './AiLoading'
 import type { CommandApiItem } from '../../../services/commands'
 
 export type AiCommandsPageTabKey = 'best-practice' | 'recommended-prompts' | 'my-prompts'
@@ -86,7 +87,7 @@ export default function AiCommandsPage({
       </div>
 
       <div className="ai-commands-page-content">
-        {loading ? <div className="ai-commands-page-status">内容加载中...</div> : null}
+        {loading ? <AiLoading message="内容加载中…" variant="page" /> : null}
         {!loading && error ? <div className="ai-commands-page-status">{error}</div> : null}
 
         {!loading && !error && activeTab === 'best-practice' ? (

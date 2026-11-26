@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 
 import type { AgentUsageLog } from '../../../services/agents'
 import { AiNameAvatar } from './AiNameAvatar'
+import { AiLoading } from './AiLoading'
 
 type AiAgentUsageListProps = {
   agents: AgentUsageLog[]
@@ -72,7 +73,7 @@ export function AiAgentUsageList({
   }, [])
 
   if (loading) {
-    return <div className="ai-drawer-chat-empty">正在刷新智能体…</div>
+    return <AiLoading message="正在刷新智能体…" />
   }
 
   if (error) {

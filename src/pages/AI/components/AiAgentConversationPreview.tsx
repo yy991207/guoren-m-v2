@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 
 import type { ChatMessage } from '../../../services/chat/types'
 import AppComposerInput from '../../../components/AppComposerInput'
@@ -91,6 +91,7 @@ export function AiAgentConversationPreview({
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [showSkillSheet, setShowSkillSheet] = useState(false)
   const [showProfileSheet, setShowProfileSheet] = useState(false)
+  const profileNoteId = useId()
   const [editName, setEditName] = useState(agentName)
   const [editDescription, setEditDescription] = useState(description)
   const hasMessages = messages.length > 0
@@ -112,7 +113,7 @@ export function AiAgentConversationPreview({
     setShowProfileSheet(false)
   }
 
-  const handleProfileSave = () => {
+  const handleProfileConfirm = () => {
     const nextAgentName = editName.trim()
 
     if (!nextAgentName) {
@@ -383,6 +384,7 @@ export function AiAgentConversationPreview({
             </label>
           </div>
 
+          <p className="ai-agent-profile-sheet-note" id={profileNoteId}>此处只修改草稿，发布智能体后才会保存配置。</p>
           <div className="ai-agent-profile-sheet-footer">
             <button
               className="ai-agent-profile-sheet-cancel"
@@ -392,13 +394,13 @@ export function AiAgentConversationPreview({
               取消
             </button>
             <button
-              aria-label="保存基础信息"
+              aria-describedby={profileNoteId}
               className={`ai-agent-profile-sheet-save${editName.trim() ? ' is-active' : ''}`}
               disabled={!editName.trim()}
               type="button"
-              onClick={handleProfileSave}
+              onClick={handleProfileConfirm}
             >
-              保存
+              确定
             </button>
           </div>
         </AiBottomSheet>

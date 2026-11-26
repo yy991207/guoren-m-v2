@@ -12,6 +12,7 @@ import {
   type LibraryPageFileType,
 } from '../../../services/library'
 import AiLibraryFilePreview from './AiLibraryFilePreview'
+import { AiLoading } from './AiLoading'
 import { AiBottomSheet } from './AiBottomSheet'
 import { AiFilterDropdown } from './AiFilterDropdown'
 import { AiFileItemContent } from './AiFileItemContent'
@@ -418,7 +419,7 @@ export function AiSidebarLibraryPage({
       </div>
 
       <div className="ai-library-hub-list">
-        {loading ? <div className="ai-library-hub-empty">库文件加载中...</div> : null}
+        {loading ? <AiLoading message="库文件加载中…" variant="page" /> : null}
         {!loading && error ? <div className="ai-library-hub-empty">{error}</div> : null}
         {!loading && !error && visibleFiles.length === 0 ? <div className="ai-library-hub-empty">当前没有可展示的库文件。</div> : null}
         {!loading && !error && visibleFiles.map((item) => (

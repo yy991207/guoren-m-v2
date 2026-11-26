@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { needsOrgMemberProfile, useSelectedOrgMemberProfiles } from '../hooks/useSelectedOrgMemberProfiles'
 import { AiSearchField } from './AiSearchField'
+import { AiLoading } from './AiLoading'
 
 import {
   ROOT_ORG_DEPART,
@@ -81,6 +83,7 @@ export function AiOrgMemberPicker({
     filterDepartAndUserResult(memberSource, searchValue)
   ), [memberSource, searchValue])
   const selectedIds = useMemo(() => new Set(selectedUsers.map((user) => user.id)), [selectedUsers])
+  const selectedProfiles = useSelectedOrgMemberProfiles(selectedUsers)
 
   const loadContactLevel = async (
     departId?: string,
@@ -154,13 +157,15 @@ export function AiOrgMemberPicker({
             <div className="ai-org-member-picker-selected-empty">请至少选择 1 个成员后再发布</div>
           ) : (
             selectedUsers.map((user) => {
-              const userName = getDisplayName(user)
+              const profile = needsOrgMemberProfile(user) ? selectedProfiles.get(user.id) : undefined
+              const userName = profile?.displayName || user.realname.trim() || user.id
+              const avatar = user.avatar || profile?.avatar
 
               return (
                 <div className="ai-org-member-picker-selected-item" key={user.id}>
                   <span className="ai-org-member-picker-selected-user">
                     <span className="ai-org-member-picker-avatar is-small">
-                      {user.avatar ? <img alt="" src={user.avatar} /> : getAvatarLetter(userName)}
+                      {avatar ? <img alt="" src={avatar} /> : getAvatarLetter(userName)}
                     </span>
                     <span className="ai-org-member-picker-selected-name">{userName}</span>
                   </span>
@@ -181,7 +186,7 @@ export function AiOrgMemberPicker({
 
       <div className="ai-org-member-picker-list">
         {contactLoading ? (
-          <div className="ai-org-member-picker-status">组织成员加载中…</div>
+          <AiLoading message="组织成员加载中…" />
         ) : contactError ? (
           <div className="ai-org-member-picker-status is-error">{contactError}</div>
         ) : (

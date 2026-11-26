@@ -1,0 +1,129 @@
+.ai-discover-favorites {
+  min-inline-size: 0;
+  margin-block-start: 12px;
+}
+
+.ai-discover-favorites-track {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.ai-discover-favorites-track::-webkit-scrollbar {
+  display: none;
+}
+
+.ai-discover-favorites-card {
+  flex: 0 0 100%;
+  min-inline-size: 0;
+  padding: 13px 14px 12px;
+  border: 1px solid #ece5d9;
+  border-radius: 16px;
+  background: #fbf8f2;
+  scroll-snap-align: start;
+}
+
+.ai-discover-favorites-track[data-scrollable='true'] .ai-discover-favorites-card {
+  flex-basis: 84%;
+  max-inline-size: 22rem;
+}
+
+.ai-discover-favorites-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-block-end: 5px;
+  color: #29251e;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.ai-discover-favorites-header > h2 {
+  margin: 0;
+  font: inherit;
+}
+
+.ai-discover-favorites-position {
+  color: #706658;
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-discover-favorites-items {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-discover-favorites-entry {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-block-size: 42px;
+  min-inline-size: 0;
+  color: #2c2923;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ai-discover-favorites-entry[data-active='false'] {
+  opacity: 0.55;
+}
+
+.ai-discover-favorites-chat {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ai-discover-favorites-chat:not(:disabled):active {
+  background: rgb(64 50 27 / 6%);
+}
+
+.ai-discover-favorites-chat:disabled {
+  cursor: default;
+}
+
+.ai-discover-favorites-chat:focus-visible {
+  outline: 2px solid #655847;
+  outline-offset: -2px;
+}
+
+.ai-discover-favorites-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  inline-size: 28px;
+  block-size: 28px;
+  overflow: hidden;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.ai-discover-favorites-avatar-image {
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+}
+
+.ai-discover-favorites-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-discover-favorites-empty {
+  margin: 6px 0 0;
+  color: #706658;
+  font-size: 13px;
+}

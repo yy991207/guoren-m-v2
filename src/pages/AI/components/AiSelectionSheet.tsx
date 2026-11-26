@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { AiBottomSheet } from './AiBottomSheet'
+import { AiLoading } from './AiLoading'
 import { AiSearchField } from './AiSearchField'
 
 type AiSelectionSheetItem = {
@@ -72,7 +73,7 @@ export function AiSelectionSheet({
       <div className={`ai-selection-sheet-body has-edge-scrollbar${children ? ' is-plain' : ''}`}>
         {children ?? (
           <>
-            {loading ? <div className="ai-selection-sheet-status">加载中…</div> : null}
+            {loading ? <AiLoading message="加载中…" /> : null}
             {!loading && error ? <div className="ai-selection-sheet-status is-error">{error}</div> : null}
             {!loading && !error && items.length === 0 ? <div className="ai-selection-sheet-status">{emptyText}</div> : null}
             {!loading && !error && items.length > 0 ? (

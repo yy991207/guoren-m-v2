@@ -3,12 +3,13 @@ import './AiSectionTabs.css'
 
 type AiSectionTabsProps<Key extends string> = {
   label: string
+  variant?: 'segmented' | 'chips'
   tabs: ReadonlyArray<{ key: Key; label: string; content: ReactNode }>
   value: NoInfer<Key>
   onChange: (value: NoInfer<Key>) => void
 }
 
-export function AiSectionTabs<Key extends string>({ label, tabs, value, onChange }: AiSectionTabsProps<Key>) {
+export function AiSectionTabs<Key extends string>({ label, variant = 'segmented', tabs, value, onChange }: AiSectionTabsProps<Key>) {
   const id = useId()
 
   const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -27,7 +28,7 @@ export function AiSectionTabs<Key extends string>({ label, tabs, value, onChange
 
   return (
     <>
-      <div aria-label={label} className="ai-section-tabs" role="tablist">
+      <div aria-label={label} className="ai-section-tabs" data-variant={variant} role="tablist">
         {tabs.map((tab, index) => (
           <button
             aria-controls={`${id}-panel-${tab.key}`}
